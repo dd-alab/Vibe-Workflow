@@ -3,6 +3,10 @@ import CharacterDetailView from "../../../../../components/characters/CharacterD
 export default async function CharacterPage({ params }) {
   const { projectId, characterId } = await params;
   return (
-    <CharacterDetailView projectId={projectId} characterId={characterId} />
+    <CharacterDetailView
+      key={characterId}
+      projectId={projectId}
+      characterId={characterId}
+    />
   );
 }

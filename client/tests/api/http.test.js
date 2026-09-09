@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, request } from "../../lib/api/http";
+import { ApiError, request, uploadRequest } from "../../lib/api/http";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -31,5 +31,58 @@ describe("request", () => {
     await expect(request("/api/projects")).rejects.toEqual(
       new ApiError("Impossible de joindre le serveur local.", 0, expect.any(Error)),
     );
+  });
+});
+
+describe("uploadRequest", () => {
+  it("reports upload progress without setting a multipart content type", async () => {
+    const requests = [];
+    class FakeXMLHttpRequest {
+      constructor() {
+        this.headers = {};
+        this.upload = {};
+        requests.push(this);
+      }
+
+      open(method, path) {
+        this.method = method;
+        this.path = path;
+      }
+
+      setRequestHeader(name, value) {
+        this.headers[name] = value;
+      }
+
+      send(body) {
+        this.body = body;
+      }
+    }
+    vi.stubGlobal("XMLHttpRequest", FakeXMLHttpRequest);
+    const onProgress = vi.fn();
+    const formData = new FormData();
+
+    const result = uploadRequest("/api/upload", formData, { onProgress });
+    const xhr = requests[0];
+    xhr.upload.onprogress({ lengthComputable: true, loaded: 5, total: 10 });
+    xhr.status = 201;
+    xhr.responseText = '{"revision":1}';
+    xhr.onload();
+
+    await expect(result).resolves.toEqual({ revision: 1 });
+    expect(onProgress).toHaveBeenCalledWith(50);
+    expect(xhr.headers.Accept).toBe("application/json");
+    expect(xhr.headers["Content-Type"]).toBeUndefined();
+    expect(xhr.body).toBe(formData);
+  });
+
+  it("rejects an already aborted upload without opening a request", async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(
+      uploadRequest("/api/upload", new FormData(), {
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({ name: "AbortError" });
   });
 });

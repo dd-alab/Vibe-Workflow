@@ -35,6 +35,7 @@ const character = {
     },
   ],
   active_prompt_version_id: "prompt-uuid",
+  assets: [],
   updated_at: "2026-09-09T10:00:00Z",
 };
 

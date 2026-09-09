@@ -1,3 +1,3 @@
-from . import characters, projects
+from . import assets, characters, projects
 
-__all__ = ["characters", "projects"]
+__all__ = ["assets", "characters", "projects"]

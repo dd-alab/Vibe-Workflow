@@ -125,7 +125,7 @@ class Asset(DomainModel):
     relative_path: str
     thumbnail_relative_path: str | None = None
     classification: AssetClassification = AssetClassification.NEUTRAL
-    sha256: str | None = None
+    sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     media_type: str | None = None
     width: int | None = Field(default=None, gt=0)
     height: int | None = Field(default=None, gt=0)

@@ -9,6 +9,7 @@ import {
   getCharacter,
   updateCharacter,
 } from "../../lib/api/characters";
+import ReferenceLibrary from "./ReferenceLibrary";
 
 function draftKey(prefix) {
   return `${prefix}-${crypto.randomUUID()}`;
@@ -65,12 +66,14 @@ export default function CharacterDetailView({ projectId, characterId }) {
   const [promptError, setPromptError] = useState("");
   const [savingPrompt, setSavingPrompt] = useState(false);
   const [activatingPromptId, setActivatingPromptId] = useState(null);
-  const isMutating =
+  const [referencesMutating, setReferencesMutating] = useState(false);
+  const editorMutating =
     savingName ||
     savingTexts ||
     savingBlocks ||
     savingPrompt ||
     activatingPromptId !== null;
+  const isMutating = editorMutating || referencesMutating;
 
   useEffect(() => {
     let cancelled = false;
@@ -384,7 +387,22 @@ export default function CharacterDetailView({ projectId, characterId }) {
 
       <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 md:p-6">
         <SectionHeader
-          eyebrow="01 / Description"
+          eyebrow="01 / References"
+          title="Images de reference"
+          description="Importez les images qui guideront ce personnage. Elles sont copiees dans sa bibliotheque locale."
+        />
+        <ReferenceLibrary
+          projectId={projectId}
+          character={character}
+          disabled={editorMutating}
+          onCharacterChange={setCharacter}
+          onBusyChange={setReferencesMutating}
+        />
+      </section>
+
+      <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 md:p-6">
+        <SectionHeader
+          eyebrow="02 / Description"
           title="Textes courts"
           description="Consignez les elements narratifs utiles sans les melanger aux prompts techniques."
         />
@@ -446,7 +464,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
 
       <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 md:p-6">
         <SectionHeader
-          eyebrow="02 / Modules"
+          eyebrow="03 / Modules"
           title="Blocs reutilisables"
           description="Ajoutez des fragments optionnels. Un bloc utilise par une version devient immuable pour preserver l'historique."
         />
@@ -539,7 +557,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
 
       <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 md:p-6">
         <SectionHeader
-          eyebrow="03 / Prompt"
+          eyebrow="04 / Prompt"
           title="Nouvelle version"
           description="Chaque enregistrement cree une version immuable. L'activation reste une action separee."
         />

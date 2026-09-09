@@ -26,6 +26,31 @@ class Settings(BaseSettings):
         default="mock-upscale",
         validation_alias="DEFAULT_UPSCALE_CONNECTOR",
     )
+    max_reference_bytes: int = Field(
+        default=25 * 1024 * 1024,
+        gt=0,
+        validation_alias="MAX_REFERENCE_BYTES",
+    )
+    max_reference_width: int = Field(
+        default=16_384,
+        gt=0,
+        validation_alias="MAX_REFERENCE_WIDTH",
+    )
+    max_reference_height: int = Field(
+        default=16_384,
+        gt=0,
+        validation_alias="MAX_REFERENCE_HEIGHT",
+    )
+    max_reference_pixels: int = Field(
+        default=100_000_000,
+        gt=0,
+        validation_alias="MAX_REFERENCE_PIXELS",
+    )
+    thumbnail_max_dimension: int = Field(
+        default=512,
+        gt=0,
+        validation_alias="THUMBNAIL_MAX_DIMENSION",
+    )
 
     @field_validator("projects_root")
     @classmethod

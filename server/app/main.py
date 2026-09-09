@@ -5,10 +5,15 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .api import characters, projects
+from .api import assets, characters, projects
 from .repositories.errors import ConflictError, NotFoundError, RepositoryError
 from .routers import app_router, workflow_router
-from .services.errors import ServiceValidationError
+from .services.errors import (
+    AssetFileMissingError,
+    ServiceValidationError,
+    UnsupportedMediaTypeError,
+    UploadTooLargeError,
+)
 
 # Load environment variables from .env file
 # The .env file is located in the server/ directory
@@ -21,6 +26,7 @@ app.include_router(workflow_router.router, prefix="/api/workflow", tags=["workfl
 app.include_router(app_router.router, prefix="/api/app", tags=["app"])
 app.include_router(projects.router, prefix="/api")
 app.include_router(characters.router, prefix="/api")
+app.include_router(assets.router, prefix="/api")
 
 # Configure CORS
 app.add_middleware(
@@ -63,6 +69,39 @@ async def repository_error_handler(_request: Request, _error: RepositoryError):
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "Les donnees locales n'ont pas pu etre lues."},
+    )
+
+
+@app.exception_handler(UnsupportedMediaTypeError)
+async def unsupported_media_handler(
+    _request: Request, error: UnsupportedMediaTypeError
+):
+    return JSONResponse(
+        status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        content={"detail": str(error)},
+    )
+
+
+@app.exception_handler(UploadTooLargeError)
+async def upload_too_large_handler(_request: Request, error: UploadTooLargeError):
+    return JSONResponse(
+        status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+        content={"detail": str(error)},
+    )
+
+
+@app.exception_handler(AssetFileMissingError)
+async def asset_file_missing_handler(
+    _request: Request, error: AssetFileMissingError
+):
+    return JSONResponse(
+        status_code=status.HTTP_410_GONE,
+        content={
+            "code": "asset_file_missing",
+            "detail": str(error),
+            "asset_id": str(error.asset_id),
+            "variant": error.variant,
+        },
     )
 
 

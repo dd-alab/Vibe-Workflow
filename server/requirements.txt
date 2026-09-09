@@ -6,4 +6,6 @@ httpx
 python-dotenv
 pydantic-settings
 portalocker
+Pillow
+python-multipart
 ruff
