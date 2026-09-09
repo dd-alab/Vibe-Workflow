@@ -1,0 +1,95 @@
+export const PORT_CHARACTER = "character";
+export const PORT_PROMPT = "prompt";
+export const PORT_IMAGE = "image";
+
+export const defaultNodeDefinitions = [
+  {
+    type: "character_input",
+    name: "Entree personnage",
+    category: "entree",
+    description: "Charge les textes, prompts et references du personnage.",
+    inputs: [],
+    outputs: [{ name: "character", type: PORT_CHARACTER }],
+    parameters: [],
+    connectorRequired: false,
+  },
+  {
+    type: "prompt_variant",
+    name: "Variante de prompt",
+    category: "prompt",
+    description: "Selectionne ou combine un prompt libre avec des blocs optionnels.",
+    inputs: [{ name: "character", type: PORT_CHARACTER }],
+    outputs: [{ name: "prompt", type: PORT_PROMPT }],
+    parameters: [
+      { name: "prompt_text", type: "string", default: "", required: true },
+    ],
+    connectorRequired: false,
+  },
+  {
+    type: "image_generation",
+    name: "Generation image",
+    category: "generation",
+    description: "Appelle un connecteur configurable de generation.",
+    inputs: [{ name: "prompt", type: PORT_PROMPT }],
+    outputs: [{ name: "image", type: PORT_IMAGE }],
+    parameters: [
+      { name: "width", type: "integer", default: 1024 },
+      { name: "height", type: "integer", default: 1024 },
+      { name: "seed", type: "integer", default: null },
+    ],
+    connectorRequired: true,
+  },
+  {
+    type: "result_set",
+    name: "Lot de resultats",
+    category: "sortie",
+    description: "Enregistre les images brutes dans le dossier generations.",
+    inputs: [{ name: "image", type: PORT_IMAGE }],
+    outputs: [],
+    parameters: [{ name: "prefix", type: "string", default: "generation" }],
+    connectorRequired: false,
+  },
+  {
+    type: "selection",
+    name: "Selection",
+    category: "tri",
+    description: "Marque favoris, rejets et image courante.",
+    inputs: [{ name: "image", type: PORT_IMAGE }],
+    outputs: [{ name: "image", type: PORT_IMAGE }],
+    parameters: [
+      { name: "classification", type: "string", default: "neutral" },
+    ],
+    connectorRequired: false,
+  },
+  {
+    type: "upscale",
+    name: "Upscale",
+    category: "sortie",
+    description: "Appelle un connecteur d'upscale depuis une image selectionnee.",
+    inputs: [{ name: "image", type: PORT_IMAGE }],
+    outputs: [{ name: "image", type: PORT_IMAGE }],
+    parameters: [{ name: "scale", type: "integer", default: 2 }],
+    connectorRequired: true,
+  },
+  {
+    type: "export",
+    name: "Export",
+    category: "sortie",
+    description: "Copie ou convertit la version finale dans le dossier exports.",
+    inputs: [{ name: "image", type: PORT_IMAGE }],
+    outputs: [],
+    parameters: [
+      { name: "filename", type: "string", default: "" },
+      { name: "format", type: "string", default: "png" },
+    ],
+    connectorRequired: false,
+  },
+];
+
+export function nodeDefinitionMap(definitions) {
+  const source = definitions || defaultNodeDefinitions;
+  return source.reduce((map, definition) => {
+    map[definition.type] = definition;
+    return map;
+  }, {});
+}

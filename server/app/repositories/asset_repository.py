@@ -172,6 +172,47 @@ class AssetRepository:
                     pass
             return updated
 
+    def register_asset(
+        self,
+        project_id: UUID | str,
+        character_id: UUID | str,
+        *,
+        expected_revision: int,
+        asset: Asset,
+        staged_content_path: Path,
+        staged_thumbnail_path: Path | None = None,
+    ) -> Character:
+        project_directory = self.projects.path_for(project_id)
+        published: list[Path] = []
+        with project_lock(project_directory):
+            character, character_directory = self._load_character_locked(
+                project_directory, project_id, character_id
+            )
+            self._check_revision(character, expected_revision)
+            content_path, thumbnail_path = self._publication_paths(
+                project_directory, character, asset
+            )
+            if content_path.exists() or (thumbnail_path and thumbnail_path.exists()):
+                raise ConflictError("asset destination already exists")
+
+            try:
+                os.replace(staged_content_path, content_path)
+                published.append(content_path)
+                if thumbnail_path is not None:
+                    os.replace(staged_thumbnail_path, thumbnail_path)
+                    published.append(thumbnail_path)
+                data = character.model_dump()
+                data["assets"] = [*character.assets, asset]
+                data["revision"] = character.revision + 1
+                data["updated_at"] = utc_now()
+                updated = Character.model_validate(data)
+                self.characters._write(character_directory, updated)
+                return updated
+            except Exception:
+                for path in reversed(published):
+                    path.unlink(missing_ok=True)
+                raise
+
     def _load_character_locked(
         self,
         project_directory: Path,
@@ -222,6 +263,56 @@ class AssetRepository:
             or content_relative.suffix not in {".png", ".jpg", ".webp"}
         ):
             raise CorruptMetadataError("reference path does not match its owner")
+        thumbnail_relative = (
+            PurePosixPath(asset.thumbnail_relative_path)
+            if asset.thumbnail_relative_path is not None
+            else None
+        )
+        if thumbnail_relative is not None and (
+            thumbnail_relative.parent != PurePosixPath("thumbnails")
+            or thumbnail_relative.name != f"{asset.id}.png"
+        ):
+            raise CorruptMetadataError("thumbnail path does not match its asset")
+
+        content_directory = self._safe_directory(
+            project_directory, content_relative.parent
+        )
+        content_path = self._safe_file_path(
+            content_directory, content_relative.name
+        )
+        thumbnail_path = None
+        if thumbnail_relative is not None:
+            thumbnail_directory = self._safe_directory(
+                project_directory, thumbnail_relative.parent
+            )
+            thumbnail_path = self._safe_file_path(
+                thumbnail_directory, thumbnail_relative.name
+            )
+        return content_path, thumbnail_path
+
+    def _publication_paths(
+        self,
+        project_directory: Path,
+        character: Character,
+        asset: Asset,
+    ) -> tuple[Path, Path | None]:
+        kind_directory = {
+            AssetKind.GENERATION: "generations",
+            AssetKind.UPSCALE: "upscales",
+            AssetKind.EXPORT: "exports",
+        }.get(asset.kind)
+        if kind_directory is None:
+            raise CorruptMetadataError("asset kind is not publishable")
+        content_relative = PurePosixPath(asset.relative_path)
+        expected_parent = PurePosixPath(
+            "characters", character.slug, kind_directory
+        )
+        if (
+            content_relative.parent != expected_parent
+            or content_relative.stem != str(asset.id)
+            or content_relative.suffix not in {".png", ".jpg", ".webp"}
+        ):
+            raise CorruptMetadataError("asset path does not match its owner")
         thumbnail_relative = (
             PurePosixPath(asset.thumbnail_relative_path)
             if asset.thumbnail_relative_path is not None

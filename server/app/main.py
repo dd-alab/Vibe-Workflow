@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -5,8 +6,11 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .api import assets, characters, projects
+from .api import assets, characters, connectors, jobs, projects, runs, workflows
+from .config import get_settings
 from .repositories.errors import ConflictError, NotFoundError, RepositoryError
+from .repositories.job_repository import JobRepository
+from .repositories.project_repository import ProjectRepository
 from .routers import app_router, workflow_router
 from .services.errors import (
     AssetFileMissingError,
@@ -14,19 +18,35 @@ from .services.errors import (
     UnsupportedMediaTypeError,
     UploadTooLargeError,
 )
+from .services.job_runner import JobRunner
 
 # Load environment variables from .env file
 # The .env file is located in the server/ directory
 env_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
-app = FastAPI(title="Circus Portraits API", version="1.0.0")
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    settings = get_settings()
+    projects = ProjectRepository(settings.projects_root)
+    runner = JobRunner(JobRepository(settings.projects_root))
+    for project in projects.list():
+        runner.recover_interrupted(project.id)
+    yield
+
+
+app = FastAPI(title="Circus Portraits API", version="1.0.0", lifespan=lifespan)
 
 app.include_router(workflow_router.router, prefix="/api/workflow", tags=["workflow"])
 app.include_router(app_router.router, prefix="/api/app", tags=["app"])
 app.include_router(projects.router, prefix="/api")
 app.include_router(characters.router, prefix="/api")
 app.include_router(assets.router, prefix="/api")
+app.include_router(workflows.router, prefix="/api")
+app.include_router(workflows.definitions_router, prefix="/api")
+app.include_router(runs.router, prefix="/api")
+app.include_router(jobs.router, prefix="/api")
+app.include_router(connectors.router, prefix="/api")
 
 # Configure CORS
 app.add_middleware(

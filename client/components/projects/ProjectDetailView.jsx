@@ -201,13 +201,21 @@ export default function ProjectDetailView({ projectId }) {
               {characters.length}/30 fiches preparees
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setRenamingProject((visible) => !visible)}
-            className="min-h-11 self-start rounded-xl border border-white/10 px-4 text-sm font-medium text-zinc-200 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus lg:self-auto"
-          >
-            Renommer le projet
-          </button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Link
+              href={`/projects/${projectId}/workflows`}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/10 px-4 text-sm font-medium text-zinc-200 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
+            >
+              Workflows
+            </Link>
+            <button
+              type="button"
+              onClick={() => setRenamingProject((visible) => !visible)}
+              className="min-h-11 self-start rounded-xl border border-white/10 px-4 text-sm font-medium text-zinc-200 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus lg:self-auto"
+            >
+              Renommer le projet
+            </button>
+          </div>
         </div>
       </header>
 

@@ -256,9 +256,13 @@ class Job(DomainModel):
     project_id: UUID
     workflow_id: UUID
     character_id: UUID | None = None
+    run_id: UUID | None = None
+    node_id: str | None = None
     connector_id: str = Field(min_length=1, max_length=120)
     status: RunStatus = RunStatus.QUEUED
     parameters: dict[str, Any] = Field(default_factory=dict)
+    inputs: dict[str, Any] = Field(default_factory=dict)
+    output_paths: list[str] = Field(default_factory=list)
     output_asset_ids: list[UUID] = Field(default_factory=list)
     previous_attempt_id: UUID | None = None
     error: str | None = None
@@ -268,6 +272,11 @@ class Job(DomainModel):
     @field_validator("parameters")
     @classmethod
     def parameters_contain_no_secrets(cls, value: dict[str, Any]) -> dict[str, Any]:
+        return ensure_no_secrets(value)
+
+    @field_validator("inputs")
+    @classmethod
+    def inputs_contain_no_secrets(cls, value: dict[str, Any]) -> dict[str, Any]:
         return ensure_no_secrets(value)
 
     @field_validator("error")
