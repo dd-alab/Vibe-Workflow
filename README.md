@@ -204,6 +204,36 @@ docker compose down
   npm run dev:app
   ```
 
+### Windows 11 local development
+
+PowerShell can block the `npm.ps1` shim when script execution is disabled. Use
+`npm.cmd` from the repository root without changing the machine policy:
+
+```powershell
+npm.cmd install
+npm.cmd run build:lib
+npm.cmd run dev:app
+```
+
+In a second terminal, prepare and start the backend without activating its
+virtual environment:
+
+```powershell
+python -m venv server\venv
+server\venv\Scripts\python.exe -m pip install -r server\requirements-dev.txt
+server\venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --app-dir server
+```
+
+Run the baseline checks from the repository root:
+
+```powershell
+npm.cmd run test
+npm.cmd run lint
+npm.cmd run build
+server\venv\Scripts\python.exe -m pytest server\tests
+server\venv\Scripts\python.exe -m ruff check server
+```
+
 ---
 
 ## Comparisons

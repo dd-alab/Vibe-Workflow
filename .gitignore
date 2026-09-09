@@ -37,6 +37,7 @@ __pycache__/
 venv/
 env/
 ENV/
+/server/data/
 
 # IDEs
 .vscode/

@@ -9,8 +9,11 @@
     ],
     "scripts": {
         "dev:app": "npm run dev -w client",
+        "build": "npm run build:lib && npm run build:app",
         "build:app": "npm run build -w client",
         "build:lib": "npm run build -w packages/workflow-builder",
+        "lint": "npm run lint -w client",
+        "test": "npm run test -w packages/workflow-builder && npm run test -w client",
         "install:all": "npm install"
     }
 }

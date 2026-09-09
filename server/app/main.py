@@ -1,14 +1,15 @@
 from pathlib import Path
+
 from dotenv import load_dotenv
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from .routers import app_router, workflow_router
 
 # Load environment variables from .env file
 # The .env file is located in the server/ directory
 env_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
-
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from .routers import workflow_router, app_router
 
 app = FastAPI(title="Workflow API", version="1.0.0")
 
@@ -24,9 +25,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to Workflow API"}
+
 
 @app.get("/api/health")
 async def health_check():

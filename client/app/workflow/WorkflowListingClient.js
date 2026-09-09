@@ -110,7 +110,7 @@ const WorkflowListingClient = ({ initialWorkflowList }) => {
     setLoading(true);
     axios.post("/api/workflow/create", workflowPayload)
       .then((response) => {
-        window.location.href = `/workflow/${response.data.workflow_id}`;
+        router.push(`/workflow/${response.data.workflow_id}`);
       })
       .catch((error) => {
         console.error(error);

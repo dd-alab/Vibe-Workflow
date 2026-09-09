@@ -20,14 +20,22 @@ source venv/bin/activate
 
 3. Install dependencies:
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
+```
+
+4. Create `.env` from `.env.example`. `PROJECTS_ROOT` controls where local
+project JSON files and images are stored. Relative paths are resolved from the
+`server` directory; use an absolute path if projects should live elsewhere.
+
+```dotenv
+PROJECTS_ROOT=./data/projects
 ```
 
 ## Running the Server
 
 Start the development server:
 ```bash
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 The API will be available at:
@@ -39,3 +47,21 @@ The API will be available at:
 
 - `GET /` - Welcome message
 - `GET /api/health` - Health check endpoint
+
+## Windows PowerShell
+
+If PowerShell blocks virtual-environment activation scripts, call the virtual
+environment executables directly:
+
+```powershell
+python -m venv venv
+venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Run backend checks from the `server` directory:
+
+```powershell
+venv\Scripts\python.exe -m pytest
+venv\Scripts\python.exe -m ruff check .
+```

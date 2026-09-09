@@ -4,4 +4,6 @@ sqlalchemy
 asyncpg
 httpx
 python-dotenv
+pydantic-settings
+portalocker
 ruff

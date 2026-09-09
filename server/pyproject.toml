@@ -1,9 +1,4 @@
 [tool.ruff]
-# Enable pycodestyle (`E`), Pyflakes (`F`), undefined names (`F401`, `F821`)
-select = ["E", "F", "W", "I", "N", "UP"]
-ignore = []
-
-# Exclude common directories
 exclude = [
     ".git",
     "__pycache__",
@@ -16,8 +11,12 @@ exclude = [
 line-length = 88
 
 [tool.ruff.lint]
-# Allow unused variables when underscore-prefixed.
+select = ["E", "F", "W", "I", "N", "UP"]
+ignore = []
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.pylint.messages_control]
 disable = [
