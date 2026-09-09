@@ -34,12 +34,12 @@ function formatDate(value) {
 
 function SectionHeader({ eyebrow, title, description }) {
   return (
-    <div className="mb-5">
+    <div className="mb-3">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-soft">
         {eyebrow}
       </p>
-      <h2 className="mt-2 text-xl font-semibold text-white">{title}</h2>
-      <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
+      <h2 className="mt-1 text-xl font-semibold text-white">{title}</h2>
+      <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-500">
         {description}
       </p>
     </div>
@@ -301,7 +301,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
   const promptHistory = [...character.prompt_versions].reverse();
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       <header>
         <Link
           href={`/projects/${projectId}`}
@@ -309,7 +309,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
         >
           Retour au projet
         </Link>
-        <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="mt-2 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-accent-soft">
               Fiche personnage
@@ -345,7 +345,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
       {renaming && (
         <form
           onSubmit={handleRename}
-          className="rounded-2xl border border-accent/20 bg-accent/5 p-5"
+          className="rounded-2xl border border-accent/20 bg-accent/5 p-4"
         >
           <label className="block text-sm font-medium text-zinc-200">
             Nouveau nom du personnage
@@ -382,7 +382,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
         </form>
       )}
 
-      <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 md:p-6">
+      <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 md:p-5">
         <SectionHeader
           eyebrow="01 / References"
           title="Images de reference"
@@ -397,13 +397,13 @@ export default function CharacterDetailView({ projectId, characterId }) {
         />
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 md:p-6">
+      <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 md:p-5">
         <SectionHeader
           eyebrow="02 / Description"
           title="Textes courts"
           description="Consignez les elements narratifs utiles sans les melanger aux prompts techniques."
         />
-        <div className="space-y-3">
+        <div className="space-y-2">
           {texts.map((item, index) => (
             <div key={item.key} className="flex flex-col gap-2 sm:flex-row sm:items-start">
               <label className="min-w-0 flex-1 text-sm text-zinc-300">
@@ -434,7 +434,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
             </p>
           )}
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
             onClick={addText}
@@ -459,13 +459,13 @@ export default function CharacterDetailView({ projectId, characterId }) {
         )}
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 md:p-6">
+      <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 md:p-5">
         <SectionHeader
           eyebrow="03 / Modules"
           title="Blocs reutilisables"
           description="Ajoutez des fragments optionnels. Leur contenu est copie dans chaque version qui les utilise, vous pouvez donc les modifier ou les supprimer librement."
         />
-        <div className="space-y-3">
+        <div className="space-y-2">
           {blocks.map((block, index) => {
             return (
               <div
@@ -516,7 +516,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
             </p>
           )}
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
             onClick={addBlock}
@@ -541,7 +541,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
         )}
       </section>
 
-      <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 md:p-6">
+      <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 md:p-5">
         <SectionHeader
           eyebrow="04 / Prompt"
           title="Nouvelle version"
@@ -561,7 +561,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
             />
           </label>
           {character.prompt_blocks.length > 0 && (
-            <fieldset className="mt-4">
+            <fieldset className="mt-3">
               <legend className="text-sm font-medium text-zinc-300">
                 Blocs a associer
               </legend>
@@ -599,8 +599,8 @@ export default function CharacterDetailView({ projectId, characterId }) {
           </p>
         )}
 
-        <div className="mt-8 border-t border-white/10 pt-6">
-          <div className="mb-4 flex items-baseline justify-between">
+        <div className="mt-6 border-t border-white/10 pt-5">
+          <div className="mb-3 flex items-baseline justify-between">
             <h3 className="font-semibold text-white">Historique</h3>
             <span className="text-xs tabular-nums text-zinc-500">
               {promptHistory.length} version{promptHistory.length > 1 ? "s" : ""}
@@ -611,7 +611,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
               Aucune version de prompt.
             </p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {promptHistory.map((prompt, index) => {
                 const isActive = character.active_prompt_version_id === prompt.id;
                 const promptBlocks = prompt.blocks || [];
@@ -652,7 +652,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
                       {prompt.text}
                     </p>
                     {promptBlocks.length > 0 && (
-                      <div className="mt-4 flex flex-wrap gap-2">
+                      <div className="mt-3 flex flex-wrap gap-2">
                         {promptBlocks.map((block) => (
                           <span
                             key={block.id}

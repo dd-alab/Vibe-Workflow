@@ -41,8 +41,8 @@ export default function AppShell({ children }) {
   const projectIsActive = pathname === "/projects" || Boolean(projectId);
 
   return (
-    <div className="min-h-dvh bg-[#050505] text-zinc-100 md:flex">
-      <aside className="border-b border-white/10 bg-zinc-950/95 md:sticky md:top-0 md:h-dvh md:w-60 md:shrink-0 md:border-r md:border-b-0">
+    <div className="min-h-dvh bg-[#282828] text-zinc-100 md:flex">
+      <aside className="border-b border-white/10 bg-[#212121]/95 md:sticky md:top-0 md:h-dvh md:w-60 md:shrink-0 md:border-r md:border-b-0">
         <div className="flex h-full flex-col">
           <Link
             href="/projects"
@@ -105,7 +105,7 @@ export default function AppShell({ children }) {
 
       <main className="relative min-w-0 flex-1 overflow-hidden">
         <div className="pointer-events-none absolute -top-32 right-0 h-96 w-96 rounded-full bg-accent/10 blur-[120px]" />
-        <div className="relative mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 md:px-10 md:py-12">
+        <div className="relative w-full px-4 py-5 sm:px-6 md:px-8 md:py-5">
           {children}
         </div>
       </main>

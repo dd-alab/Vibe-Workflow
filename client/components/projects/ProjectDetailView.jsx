@@ -181,7 +181,7 @@ export default function ProjectDetailView({ projectId }) {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       <header>
         <Link
           href="/projects"
@@ -189,7 +189,7 @@ export default function ProjectDetailView({ projectId }) {
         >
           Retour aux projets
         </Link>
-        <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="mt-2 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-accent-soft">
               Projet
@@ -214,7 +214,7 @@ export default function ProjectDetailView({ projectId }) {
       {renamingProject && (
         <form
           onSubmit={handleProjectRename}
-          className="rounded-2xl border border-accent/20 bg-accent/5 p-5"
+          className="rounded-2xl border border-accent/20 bg-accent/5 p-4"
         >
           <label className="block text-sm font-medium text-zinc-200">
             Nouveau nom du projet
@@ -248,8 +248,8 @@ export default function ProjectDetailView({ projectId }) {
         </form>
       )}
 
-      <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 md:p-6">
-        <div className="mb-5">
+      <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 md:p-5">
+        <div className="mb-3">
           <h2 className="text-lg font-semibold text-white">Nouveau personnage</h2>
           <p className="mt-1 text-sm text-zinc-500">
             Creez une fiche vide, puis ajoutez ses textes et ses prompts.
@@ -282,7 +282,7 @@ export default function ProjectDetailView({ projectId }) {
       </section>
 
       <section>
-        <div className="mb-4 flex items-baseline justify-between gap-4">
+        <div className="mb-3 flex items-baseline justify-between gap-4">
           <h2 className="text-lg font-semibold text-white">Personnages</h2>
           <span className="text-xs tabular-nums text-zinc-500">
             {characters.length} fiche{characters.length > 1 ? "s" : ""}
@@ -345,7 +345,7 @@ export default function ProjectDetailView({ projectId }) {
       </section>
 
       {renameTarget && (
-        <section className="rounded-2xl border border-accent/20 bg-accent/5 p-5">
+        <section className="rounded-2xl border border-accent/20 bg-accent/5 p-4">
           <form onSubmit={handleCharacterRename}>
             <label className="block text-sm font-medium text-zinc-200">
               Renommer {renameTarget.name}

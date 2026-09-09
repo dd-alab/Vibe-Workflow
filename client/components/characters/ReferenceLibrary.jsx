@@ -198,7 +198,7 @@ export default function ReferenceLibrary({
         onDragOver={(event) => event.preventDefault()}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`rounded-2xl border border-dashed p-6 text-center transition-colors ${
+        className={`rounded-2xl border border-dashed p-4 text-center transition-colors ${
           isDragging
             ? "border-accent bg-accent/10"
             : "border-white/15 bg-black/20"
@@ -214,14 +214,14 @@ export default function ReferenceLibrary({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={controlsDisabled}
-          className="mt-4 min-h-11 rounded-xl bg-accent px-5 text-sm font-semibold text-white hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-3 min-h-11 rounded-xl bg-accent px-5 text-sm font-semibold text-white hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
         >
           Choisir des images
         </button>
       </div>
 
       {uploads.length > 0 && (
-        <div className="mt-4 space-y-2" aria-label="Imports en cours">
+        <div className="mt-3 space-y-2" aria-label="Imports en cours">
           {uploads.map((item) => (
             <div
               key={item.id}
@@ -273,11 +273,11 @@ export default function ReferenceLibrary({
       </p>
 
       {references.length === 0 ? (
-        <p className="mt-5 rounded-xl border border-dashed border-white/10 p-5 text-sm text-zinc-600">
+        <p className="mt-4 rounded-xl border border-dashed border-white/10 p-4 text-sm text-zinc-600">
           Aucune image de reference
         </p>
       ) : (
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {references.map((asset, index) => {
             const missing = missingThumbnailIds.includes(asset.id);
             return (

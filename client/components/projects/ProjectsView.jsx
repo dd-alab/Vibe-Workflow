@@ -73,7 +73,7 @@ export default function ProjectsView() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-accent-soft">
@@ -93,7 +93,7 @@ export default function ProjectsView() {
         )}
       </header>
 
-      <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 md:p-6">
+      <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 md:p-5">
         <form onSubmit={handleCreate} className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <label className="min-w-0 flex-1 text-sm font-medium text-zinc-200">
             Nom du projet
@@ -153,12 +153,12 @@ export default function ProjectsView() {
       )}
 
       {!loading && !loadError && projects.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {projects.map((project) => (
             <Link
               key={project.id}
               href={`/projects/${project.id}`}
-              className="group rounded-2xl border border-white/10 bg-white/[0.035] p-5 transition-colors hover:border-accent/40 hover:bg-accent/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
+              className="group rounded-2xl border border-white/10 bg-white/[0.035] p-4 transition-colors hover:border-accent/40 hover:bg-accent/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
@@ -182,7 +182,7 @@ export default function ProjectsView() {
                   </svg>
                 </span>
               </div>
-              <div className="mt-6 flex items-center justify-between border-t border-white/5 pt-4 text-xs">
+              <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3 text-xs">
                 <span className="text-zinc-500">Personnages</span>
                 <span className="font-medium tabular-nums text-zinc-300">
                   {project.characters?.length ?? 0}
