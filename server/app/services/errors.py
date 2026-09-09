@@ -1,0 +1,2 @@
+class ServiceValidationError(Exception):
+    pass

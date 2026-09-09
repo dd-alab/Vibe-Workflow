@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from app.domain.models import Character, Project
+from app.domain.models import Character, Project, PromptVersion
 from app.repositories.character_repository import CharacterRepository
 from app.repositories.errors import ConflictError, CorruptMetadataError, RepositoryError
 from app.repositories.project_repository import ProjectRepository
@@ -244,3 +244,17 @@ def test_character_metadata_identity_must_match_project_reference(tmp_path) -> N
 
     with pytest.raises(CorruptMetadataError, match="identity"):
         characters.get(project.id, character.id)
+
+
+def test_character_repository_rejects_prompt_history_rewrites(tmp_path) -> None:
+    projects = ProjectRepository(tmp_path)
+    characters = CharacterRepository(tmp_path)
+    project = projects.create("Circus")
+    character = characters.create(project.id, "Auguste")
+    character.prompt_versions.append(PromptVersion(text="Version originale"))
+    character = characters.save(character)
+
+    character.prompt_versions[0] = PromptVersion(text="Version remplacee")
+
+    with pytest.raises(ConflictError, match="prompt history"):
+        characters.save(character)

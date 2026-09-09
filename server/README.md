@@ -35,7 +35,7 @@ PROJECTS_ROOT=./data/projects
 
 Start the development server:
 ```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 The API will be available at:
@@ -56,7 +56,7 @@ environment executables directly:
 ```powershell
 python -m venv venv
 venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 Run backend checks from the `server` directory:

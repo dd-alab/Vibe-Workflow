@@ -143,7 +143,7 @@ source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # Run the server
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 ---
@@ -221,7 +221,7 @@ virtual environment:
 ```powershell
 python -m venv server\venv
 server\venv\Scripts\python.exe -m pip install -r server\requirements-dev.txt
-server\venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --app-dir server
+server\venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 --app-dir server
 ```
 
 Run the baseline checks from the repository root:

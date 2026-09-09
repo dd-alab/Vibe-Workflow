@@ -1,8 +1,12 @@
+import json
 import os
 import shutil
 import tempfile
+import time
 from pathlib import Path
 from uuid import UUID
+
+from pydantic import ValidationError
 
 from app.domain.models import Character, CharacterReference, Project, utc_now
 from app.storage.atomic_json import read_json, write_json_atomic
@@ -60,7 +64,7 @@ class CharacterRepository:
                 for directory_name in CHARACTER_DIRECTORIES:
                     (temporary_directory / directory_name).mkdir()
                 self._write(temporary_directory, character)
-                os.replace(temporary_directory, character_directory)
+                self._replace_directory(temporary_directory, character_directory)
             finally:
                 if temporary_directory.exists():
                     shutil.rmtree(temporary_directory)
@@ -140,6 +144,37 @@ class CharacterRepository:
             if current.revision != character.revision:
                 raise ConflictError("character changed on disk; reload before saving")
 
+            current_prompts = [
+                prompt.model_dump(mode="json") for prompt in current.prompt_versions
+            ]
+            saved_prompts = [
+                prompt.model_dump(mode="json") for prompt in character.prompt_versions
+            ]
+            if (
+                len(saved_prompts) < len(current_prompts)
+                or saved_prompts[: len(current_prompts)] != current_prompts
+            ):
+                raise ConflictError(
+                    "prompt history is append-only and cannot be changed"
+                )
+
+            referenced_block_ids = {
+                block_id
+                for prompt in current.prompt_versions
+                for block_id in prompt.block_ids
+            }
+            current_blocks = {block.id: block for block in current.prompt_blocks}
+            saved_blocks = {block.id: block for block in character.prompt_blocks}
+            if any(
+                block_id not in saved_blocks
+                or saved_blocks[block_id].model_dump(mode="json")
+                != current_blocks[block_id].model_dump(mode="json")
+                for block_id in referenced_block_ids
+            ):
+                raise ConflictError(
+                    "prompt blocks referenced by history cannot be changed"
+                )
+
             updated = character.model_copy(
                 update={
                     "revision": character.revision + 1,
@@ -159,7 +194,17 @@ class CharacterRepository:
             raise NotFoundError(
                 f"character metadata is missing from '{character_directory.name}'"
             )
-        return Character.model_validate(read_json(metadata_path))
+        try:
+            return Character.model_validate(read_json(metadata_path))
+        except (
+            json.JSONDecodeError,
+            KeyError,
+            OSError,
+            TypeError,
+            ValidationError,
+            ValueError,
+        ) as error:
+            raise CorruptMetadataError("character metadata is invalid") from error
 
     def _write(self, character_directory: Path, character: Character) -> None:
         validated = Character.model_validate(character.model_dump(mode="json"))
@@ -231,3 +276,14 @@ class CharacterRepository:
         if not resolved.is_dir():
             raise CorruptMetadataError("characters directory is missing")
         return resolved
+
+    @staticmethod
+    def _replace_directory(source: Path, destination: Path) -> None:
+        for attempt in range(5):
+            try:
+                os.replace(source, destination)
+                return
+            except PermissionError:
+                if attempt == 4:
+                    raise
+                time.sleep(0.02 * (attempt + 1))

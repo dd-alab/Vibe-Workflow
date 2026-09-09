@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+@theme {
+  --color-accent: #615c50;
+  --color-accent-hover: #756f62;
+  --color-accent-soft: #b8b0a0;
+  --color-accent-focus: #9d9586;
+}
+
 /* Global Dark Scrollbars & Hide White Scrollbar Tracks */
 * {
   scrollbar-width: thin;

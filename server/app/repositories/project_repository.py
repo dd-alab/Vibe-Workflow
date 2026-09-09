@@ -19,7 +19,12 @@ from app.storage.paths import (
     validate_slug,
 )
 
-from .errors import ConflictError, NotFoundError, RepositoryError
+from .errors import (
+    ConflictError,
+    CorruptMetadataError,
+    NotFoundError,
+    RepositoryError,
+)
 
 PROJECT_DIRECTORIES = (
     "characters",
@@ -85,14 +90,7 @@ class ProjectRepository:
                     project = Project.model_validate(read_json(project_file))
                     if project.id == expected_id:
                         return project_directory
-            except (
-                json.JSONDecodeError,
-                KeyError,
-                OSError,
-                TypeError,
-                ValidationError,
-                ValueError,
-            ):
+            except CorruptMetadataError:
                 corrupt_files.append(project_file)
 
         if corrupt_files:
@@ -125,7 +123,18 @@ class ProjectRepository:
         return project_directory / "project.json"
 
     def _load(self, project_directory: Path) -> Project:
-        return Project.model_validate(read_json(self.metadata_path(project_directory)))
+        try:
+            data = read_json(self.metadata_path(project_directory))
+            return Project.model_validate(data)
+        except (
+            json.JSONDecodeError,
+            KeyError,
+            OSError,
+            TypeError,
+            ValidationError,
+            ValueError,
+        ) as error:
+            raise CorruptMetadataError("project metadata is invalid") from error
 
     def _write(self, project_directory: Path, project: Project) -> None:
         validated = Project.model_validate(project.model_dump(mode="json"))
