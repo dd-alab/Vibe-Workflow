@@ -203,6 +203,12 @@ export default function ProjectDetailView({ projectId }) {
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Link
+              href={`/projects/${projectId}/gallery`}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/10 px-4 text-sm font-medium text-zinc-200 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
+            >
+              Galerie
+            </Link>
+            <Link
               href={`/projects/${projectId}/workflows`}
               className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/10 px-4 text-sm font-medium text-zinc-200 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
             >

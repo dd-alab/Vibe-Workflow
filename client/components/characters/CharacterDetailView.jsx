@@ -10,6 +10,7 @@ import {
   updateCharacter,
 } from "../../lib/api/characters";
 import ReferenceLibrary from "./ReferenceLibrary";
+import ResultGrid from "./ResultGrid";
 
 function draftKey(prefix) {
   return `${prefix}-${crypto.randomUUID()}`;
@@ -67,13 +68,14 @@ export default function CharacterDetailView({ projectId, characterId }) {
   const [savingPrompt, setSavingPrompt] = useState(false);
   const [activatingPromptId, setActivatingPromptId] = useState(null);
   const [referencesMutating, setReferencesMutating] = useState(false);
+  const [resultsMutating, setResultsMutating] = useState(false);
   const editorMutating =
     savingName ||
     savingTexts ||
     savingBlocks ||
     savingPrompt ||
     activatingPromptId !== null;
-  const isMutating = editorMutating || referencesMutating;
+  const isMutating = editorMutating || referencesMutating || resultsMutating;
 
   useEffect(() => {
     let cancelled = false;
@@ -399,7 +401,22 @@ export default function CharacterDetailView({ projectId, characterId }) {
 
       <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 md:p-5">
         <SectionHeader
-          eyebrow="02 / Description"
+          eyebrow="02 / Resultats"
+          title="Comparaison et selection"
+          description="Classez les generations, choisissez l'image courante et exportez une version locale sans perdre l'historique."
+        />
+        <ResultGrid
+          projectId={projectId}
+          character={character}
+          disabled={editorMutating || referencesMutating}
+          onCharacterChange={setCharacter}
+          onBusyChange={setResultsMutating}
+        />
+      </section>
+
+      <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 md:p-5">
+        <SectionHeader
+          eyebrow="03 / Description"
           title="Textes courts"
           description="Consignez les elements narratifs utiles sans les melanger aux prompts techniques."
         />
@@ -461,7 +478,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
 
       <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 md:p-5">
         <SectionHeader
-          eyebrow="03 / Modules"
+          eyebrow="04 / Modules"
           title="Blocs reutilisables"
           description="Ajoutez des fragments optionnels. Leur contenu est copie dans chaque version qui les utilise, vous pouvez donc les modifier ou les supprimer librement."
         />
@@ -543,7 +560,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
 
       <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 md:p-5">
         <SectionHeader
-          eyebrow="04 / Prompt"
+          eyebrow="05 / Prompt"
           title="Nouvelle version"
           description="Chaque enregistrement cree une version immuable. L'activation reste une action separee."
         />

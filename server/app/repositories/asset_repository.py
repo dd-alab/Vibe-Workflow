@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from uuid import UUID
 
-from app.domain.models import Asset, AssetKind, Character, utc_now
+from app.domain.models import Asset, AssetClassification, AssetKind, Character, utc_now
 from app.storage.locks import project_lock
 from app.storage.paths import ensure_internal_directory, resolve_within
 
@@ -106,9 +106,14 @@ class AssetRepository:
                         project_directory,
                         Path("characters") / character.slug,
                     )
-                    content_path, thumbnail_path = self._asset_paths(
-                        project_directory, character, asset
-                    )
+                    if asset.kind == AssetKind.REFERENCE:
+                        content_path, thumbnail_path = self._asset_paths(
+                            project_directory, character, asset
+                        )
+                    else:
+                        content_path, thumbnail_path = self._publication_paths(
+                            project_directory, character, asset
+                        )
                     matches.append(
                         AssetLocation(
                             project_id=project.id,
@@ -172,6 +177,69 @@ class AssetRepository:
                     pass
             return updated
 
+    def update_classification(
+        self,
+        project_id: UUID | str,
+        character_id: UUID | str,
+        asset_id: UUID | str,
+        *,
+        expected_revision: int,
+        classification: AssetClassification,
+    ) -> Character:
+        expected_id = UUID(str(asset_id))
+        project_directory = self.projects.path_for(project_id)
+        with project_lock(project_directory):
+            character, character_directory = self._load_character_locked(
+                project_directory, project_id, character_id
+            )
+            self._check_revision(character, expected_revision)
+            found = False
+            updated_assets = []
+            for asset in character.assets:
+                if asset.id != expected_id:
+                    updated_assets.append(asset)
+                    continue
+                found = True
+                updated_assets.append(
+                    asset.model_copy(update={"classification": classification})
+                )
+            if not found:
+                raise NotFoundError(f"asset '{expected_id}' was not found")
+            data = character.model_dump()
+            data["assets"] = updated_assets
+            data["revision"] = character.revision + 1
+            data["updated_at"] = utc_now()
+            updated = Character.model_validate(data)
+            self.characters._write(character_directory, updated)
+            return updated
+
+    def select_asset(
+        self,
+        project_id: UUID | str,
+        character_id: UUID | str,
+        asset_id: UUID | str | None,
+        *,
+        expected_revision: int,
+    ) -> Character:
+        expected_id = UUID(str(asset_id)) if asset_id is not None else None
+        project_directory = self.projects.path_for(project_id)
+        with project_lock(project_directory):
+            character, character_directory = self._load_character_locked(
+                project_directory, project_id, character_id
+            )
+            self._check_revision(character, expected_revision)
+            if expected_id is not None and not any(
+                asset.id == expected_id for asset in character.assets
+            ):
+                raise NotFoundError(f"asset '{expected_id}' was not found")
+            data = character.model_dump()
+            data["selected_asset_id"] = expected_id
+            data["revision"] = character.revision + 1
+            data["updated_at"] = utc_now()
+            updated = Character.model_validate(data)
+            self.characters._write(character_directory, updated)
+            return updated
+
     def register_asset(
         self,
         project_id: UUID | str,
@@ -194,6 +262,8 @@ class AssetRepository:
             )
             if content_path.exists() or (thumbnail_path and thumbnail_path.exists()):
                 raise ConflictError("asset destination already exists")
+            if thumbnail_path is not None and staged_thumbnail_path is None:
+                raise CorruptMetadataError("asset thumbnail staging path is required")
 
             try:
                 os.replace(staged_content_path, content_path)

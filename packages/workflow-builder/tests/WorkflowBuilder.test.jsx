@@ -87,6 +87,46 @@ describe("WorkflowBuilder", () => {
     expect(lastWorkflow.nodes).toHaveLength(1);
     expect(lastWorkflow.nodes[0].type).toBe("character_input");
   });
+
+  it("sends default mock connectors for required connector nodes", () => {
+    const onRun = vi.fn();
+    render(
+      <WorkflowBuilder
+        workflow={{
+          schema_version: 1,
+          name: "Portrait flow",
+          nodes: [
+            {
+              id: "generate",
+              type: "image_generation",
+              position: { x: 0, y: 0 },
+              connector_id: null,
+              parameters: {},
+            },
+          ],
+          edges: [],
+        }}
+        nodeDefinitions={[
+          {
+            type: "image_generation",
+            name: "Generation image",
+            category: "generation",
+            inputs: [],
+            outputs: [],
+            parameters: [],
+            connector_required: true,
+          },
+        ]}
+        onRun={onRun}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Executer"));
+
+    expect(onRun.mock.calls[0][0].nodes[0].connector_id).toBe(
+      "mock-generation",
+    );
+  });
 });
 
 describe("workflowSerializer", () => {

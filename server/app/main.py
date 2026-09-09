@@ -6,7 +6,16 @@ from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .api import assets, characters, connectors, jobs, projects, runs, workflows
+from .api import (
+    assets,
+    characters,
+    connectors,
+    gallery,
+    jobs,
+    projects,
+    runs,
+    workflows,
+)
 from .config import get_settings
 from .repositories.errors import ConflictError, NotFoundError, RepositoryError
 from .repositories.job_repository import JobRepository
@@ -47,6 +56,7 @@ app.include_router(workflows.definitions_router, prefix="/api")
 app.include_router(runs.router, prefix="/api")
 app.include_router(jobs.router, prefix="/api")
 app.include_router(connectors.router, prefix="/api")
+app.include_router(gallery.router, prefix="/api")
 
 # Configure CORS
 app.add_middleware(

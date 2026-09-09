@@ -1,3 +1,4 @@
+import shutil
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -17,6 +18,7 @@ from app.repositories.asset_repository import AssetRepository
 from app.repositories.workflow_repository import WorkflowRepository
 
 from .job_runner import JobRunner
+from .thumbnail_service import ThumbnailService
 
 
 @dataclass
@@ -36,10 +38,17 @@ class WorkflowExecutor:
         jobs: JobRunner,
         assets: AssetRepository,
         workflows: WorkflowRepository,
+        thumbnails: ThumbnailService | None = None,
     ) -> None:
         self.jobs = jobs
         self.assets = assets
         self.workflows = workflows
+        self.thumbnails = thumbnails or ThumbnailService(
+            max_width=16_384,
+            max_height=16_384,
+            max_pixels=100_000_000,
+            thumbnail_max_dimension=512,
+        )
 
     def execute(
         self,
@@ -134,45 +143,58 @@ class WorkflowExecutor:
         if ctx.current_character is None:
             raise ValueError("publishing an asset requires a character context")
         character = ctx.current_character
-        if run_connector:
-            job_inputs = dict(inputs)
-            job = self.jobs.create_job(
-                project_id,
-                workflow_id=ctx.workflow.id,
-                run_id=ctx.run.id,
-                node_id=ctx.node.id,
-                character_id=character.id,
-                connector_id=ctx.node.connector_id,
-                parameters=ctx.node.parameters,
-                inputs=job_inputs,
-            )
-            ctx.job_ids.append(job.id)
-            result = self.jobs.run_job(project_id, job)
-            source_path = result.output_path
-        else:
-            source_text = inputs.get("image")
-            if not source_text:
-                raise ValueError("publishing requires an input image")
-            source_path = Path(source_text)
+        with self.assets.staging_directory(project_id) as staging_directory:
+            staged_content = staging_directory / "content.png"
+            staged_thumbnail = staging_directory / "thumbnail.png"
+            if run_connector:
+                job_inputs = dict(inputs)
+                job = self.jobs.create_job(
+                    project_id,
+                    workflow_id=ctx.workflow.id,
+                    run_id=ctx.run.id,
+                    node_id=ctx.node.id,
+                    character_id=character.id,
+                    connector_id=ctx.node.connector_id,
+                    parameters=ctx.node.parameters,
+                    inputs=job_inputs,
+                )
+                ctx.job_ids.append(job.id)
+                result = self.jobs.run_job(project_id, job)
+                shutil.move(result.output_path, staged_content)
+            else:
+                source_text = inputs.get("image")
+                if not source_text:
+                    raise ValueError("publishing requires an input image")
+                shutil.copy2(Path(source_text), staged_content)
 
-        asset_id = uuid4()
-        directory = self._kind_directory(kind)
-        relative_path = (
-            f"characters/{character.slug}/{directory}/{asset_id}.png"
-        )
-        asset = Asset(
-            id=asset_id,
-            kind=kind,
-            relative_path=relative_path,
-            media_type="image/png",
-        )
-        updated = self.assets.register_asset(
-            project_id,
-            character.id,
-            expected_revision=character.revision,
-            asset=asset,
-            staged_content_path=source_path,
-        )
+            image_info = self.thumbnails.inspect_and_create(
+                staged_content,
+                staged_thumbnail,
+            )
+            asset_id = uuid4()
+            directory = self._kind_directory(kind)
+            relative_path = (
+                f"characters/{character.slug}/{directory}/{asset_id}"
+                f"{image_info.canonical_extension}"
+            )
+            thumbnail_relative_path = f"thumbnails/{asset_id}.png"
+            asset = Asset(
+                id=asset_id,
+                kind=kind,
+                relative_path=relative_path,
+                thumbnail_relative_path=thumbnail_relative_path,
+                media_type=image_info.media_type,
+                width=image_info.width,
+                height=image_info.height,
+            )
+            updated = self.assets.register_asset(
+                project_id,
+                character.id,
+                expected_revision=character.revision,
+                asset=asset,
+                staged_content_path=staged_content,
+                staged_thumbnail_path=staged_thumbnail,
+            )
         ctx.current_character = updated
         return {"image": str(ctx.project_directory / asset.relative_path)}
 

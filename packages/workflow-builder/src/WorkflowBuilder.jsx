@@ -10,7 +10,9 @@ import {
 } from "reactflow";
 import WorkflowCanvas from "./canvas/WorkflowCanvas";
 import {
+  connectorRequired,
   defaultNodeDefinitions,
+  defaultConnectorId,
   nodeDefinitionMap,
 } from "./registry/nodeDefinitions";
 import {
@@ -158,7 +160,9 @@ export default function WorkflowBuilder({
         data: {
           definition,
           parameters,
-          connectorId: null,
+          connectorId: connectorRequired(definition)
+            ? defaultConnectorId(type)
+            : null,
         },
       };
       emit([...nodes, node], edges);
@@ -218,6 +222,10 @@ export default function WorkflowBuilder({
     () => validateWorkflow(nodes, edges, nodeDefinitions),
     [nodes, edges, nodeDefinitions],
   );
+  const serializedWorkflow = useMemo(
+    () => flowToWorkflow(nodes, edges, currentWorkflow),
+    [nodes, edges, currentWorkflow],
+  );
 
   return (
     <ReactFlowProvider>
@@ -268,14 +276,14 @@ export default function WorkflowBuilder({
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => onSave?.(currentWorkflow)}
+                onClick={() => onSave?.(serializedWorkflow)}
                 className="min-h-10 flex-1 rounded-lg bg-accent px-3 text-sm font-semibold text-white hover:bg-accent-hover"
               >
                 Enregistrer
               </button>
               <button
                 type="button"
-                onClick={() => onRun?.(currentWorkflow)}
+                onClick={() => onRun?.(serializedWorkflow)}
                 className="min-h-10 flex-1 rounded-lg border border-white/10 px-3 text-sm font-medium text-zinc-200 hover:bg-white/5"
               >
                 Executer

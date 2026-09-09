@@ -29,6 +29,27 @@ export function deleteReference(
   return request(path, { method: "DELETE" });
 }
 
+export function updateAsset(projectId, characterId, assetId, payload) {
+  return request(
+    `/api/projects/${encodeURIComponent(projectId)}/characters/${encodeURIComponent(characterId)}/assets/${encodeURIComponent(assetId)}`,
+    { method: "PATCH", body: payload },
+  );
+}
+
+export function selectAsset(projectId, characterId, payload) {
+  return request(
+    `/api/projects/${encodeURIComponent(projectId)}/characters/${encodeURIComponent(characterId)}/selection`,
+    { method: "POST", body: payload },
+  );
+}
+
+export function exportAsset(projectId, characterId, payload) {
+  return request(
+    `/api/projects/${encodeURIComponent(projectId)}/characters/${encodeURIComponent(characterId)}/exports`,
+    { method: "POST", body: payload },
+  );
+}
+
 export function assetThumbnailUrl(assetId) {
   return `/api/assets/${encodeURIComponent(assetId)}/thumbnail`;
 }

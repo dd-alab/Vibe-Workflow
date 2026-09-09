@@ -12,9 +12,12 @@ from app.repositories.workflow_repository import WorkflowRepository
 from app.services.asset_service import AssetService
 from app.services.character_service import CharacterService
 from app.services.connector_service import ConnectorService
+from app.services.export_service import ExportService
+from app.services.gallery_service import GalleryService
 from app.services.job_runner import JobRunner
 from app.services.project_service import ProjectService
 from app.services.run_service import RunService
+from app.services.selection_service import SelectionService
 from app.services.thumbnail_service import ThumbnailService
 from app.services.workflow_executor import WorkflowExecutor
 from app.services.workflow_service import WorkflowService
@@ -63,11 +66,22 @@ def get_job_service(
     return JobRunner(JobRepository(settings.projects_root))
 
 
-def _workflow_executor(root) -> WorkflowExecutor:
+def _thumbnail_service(settings: Settings) -> ThumbnailService:
+    return ThumbnailService(
+        max_width=settings.max_reference_width,
+        max_height=settings.max_reference_height,
+        max_pixels=settings.max_reference_pixels,
+        thumbnail_max_dimension=settings.thumbnail_max_dimension,
+    )
+
+
+def _workflow_executor(settings: Settings) -> WorkflowExecutor:
+    root = settings.projects_root
     return WorkflowExecutor(
         JobRunner(JobRepository(root)),
         AssetRepository(root),
         WorkflowRepository(root),
+        _thumbnail_service(settings),
     )
 
 
@@ -78,7 +92,7 @@ def get_run_service(
     return RunService(
         runs=RunRepository(root),
         jobs=JobRunner(JobRepository(root)),
-        executor=_workflow_executor(root),
+        executor=_workflow_executor(settings),
     )
 
 
@@ -86,3 +100,27 @@ def get_connector_service(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> ConnectorService:
     return ConnectorService()
+
+
+def get_selection_service(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> SelectionService:
+    return SelectionService(AssetRepository(settings.projects_root))
+
+
+def get_export_service(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> ExportService:
+    return ExportService(
+        AssetRepository(settings.projects_root),
+        _thumbnail_service(settings),
+    )
+
+
+def get_gallery_service(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> GalleryService:
+    return GalleryService(
+        CharacterRepository(settings.projects_root),
+        AssetRepository(settings.projects_root),
+    )

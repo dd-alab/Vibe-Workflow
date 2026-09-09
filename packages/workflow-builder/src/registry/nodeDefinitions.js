@@ -86,6 +86,20 @@ export const defaultNodeDefinitions = [
   },
 ];
 
+export function connectorRequired(definition) {
+  return Boolean(definition?.connectorRequired || definition?.connector_required);
+}
+
+export function defaultConnectorId(nodeType) {
+  if (nodeType === "image_generation") {
+    return "mock-generation";
+  }
+  if (nodeType === "upscale") {
+    return "mock-upscale";
+  }
+  return null;
+}
+
 export function nodeDefinitionMap(definitions) {
   const source = definitions || defaultNodeDefinitions;
   return source.reduce((map, definition) => {

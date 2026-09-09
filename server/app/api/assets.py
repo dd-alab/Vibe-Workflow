@@ -3,16 +3,42 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, ConfigDict, Field
 from starlette.background import BackgroundTask
 
-from app.domain.models import Character
+from app.domain.models import AssetClassification, Character
 from app.services.asset_service import AssetService
 from app.services.errors import AssetFileMissingError
+from app.services.export_service import ExportService
+from app.services.selection_service import SelectionService
 
-from .dependencies import get_asset_service
+from .dependencies import get_asset_service, get_export_service, get_selection_service
 
 router = APIRouter(tags=["assets"])
 AssetServiceDependency = Annotated[AssetService, Depends(get_asset_service)]
+SelectionServiceDependency = Annotated[
+    SelectionService, Depends(get_selection_service)
+]
+ExportServiceDependency = Annotated[ExportService, Depends(get_export_service)]
+
+
+class StrictRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+
+class AssetPatch(StrictRequest):
+    expected_revision: int = Field(ge=0)
+    classification: AssetClassification
+
+
+class SelectionUpdate(StrictRequest):
+    expected_revision: int = Field(ge=0)
+    asset_id: UUID | None = None
+
+
+class ExportCreate(StrictRequest):
+    expected_revision: int = Field(ge=0)
+    asset_id: UUID | None = None
 
 
 @router.post(
@@ -98,4 +124,67 @@ def delete_reference(
         character_id,
         asset_id,
         expected_revision=expected_revision,
+    )
+
+
+@router.patch(
+    "/projects/{project_id}/characters/{character_id}/assets/{asset_id}",
+    response_model=Character,
+)
+def update_asset(
+    project_id: UUID,
+    character_id: UUID,
+    asset_id: UUID,
+    payload: AssetPatch,
+    service: SelectionServiceDependency,
+) -> Character:
+    return service.classify_asset(
+        project_id,
+        character_id,
+        asset_id,
+        expected_revision=payload.expected_revision,
+        classification=payload.classification,
+    )
+
+
+@router.post(
+    "/projects/{project_id}/characters/{character_id}/selection",
+    response_model=Character,
+)
+def select_asset(
+    project_id: UUID,
+    character_id: UUID,
+    payload: SelectionUpdate,
+    service: SelectionServiceDependency,
+) -> Character:
+    return service.select_asset(
+        project_id,
+        character_id,
+        payload.asset_id,
+        expected_revision=payload.expected_revision,
+    )
+
+
+@router.post(
+    "/projects/{project_id}/characters/{character_id}/exports",
+    response_model=Character,
+    status_code=status.HTTP_201_CREATED,
+)
+def export_asset(
+    project_id: UUID,
+    character_id: UUID,
+    payload: ExportCreate,
+    service: ExportServiceDependency,
+) -> Character:
+    if payload.asset_id is None:
+        return service.export_selected(
+            project_id,
+            character_id,
+            expected_revision=payload.expected_revision,
+        )
+    return service.export_asset(
+        project_id,
+        character_id,
+        payload.asset_id,
+        expected_revision=payload.expected_revision,
     )

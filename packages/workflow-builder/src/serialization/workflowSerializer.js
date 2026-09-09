@@ -1,4 +1,8 @@
-import { nodeDefinitionMap } from "../registry/nodeDefinitions";
+import {
+  connectorRequired,
+  defaultConnectorId,
+  nodeDefinitionMap,
+} from "../registry/nodeDefinitions";
 
 export function workflowToFlow(workflow, definitions) {
   const map = nodeDefinitionMap(definitions);
@@ -11,7 +15,9 @@ export function workflowToFlow(workflow, definitions) {
       data: {
         definition,
         parameters: node.parameters || {},
-        connectorId: node.connector_id ?? null,
+        connectorId:
+          node.connector_id ??
+          (connectorRequired(definition) ? defaultConnectorId(node.type) : null),
       },
     };
   });
@@ -31,14 +37,20 @@ export function flowToWorkflow(nodes, edges, previousWorkflow = {}) {
     id: previousWorkflow?.id ?? null,
     project_id: previousWorkflow?.project_id ?? null,
     name: previousWorkflow?.name ?? "Sans titre",
-    nodes: (nodes || []).map((node) => ({
-      id: node.id,
-      type: node.type,
-      version: 1,
-      position: node.position || { x: 0, y: 0 },
-      connector_id: node.data?.connectorId ?? null,
-      parameters: node.data?.parameters || {},
-    })),
+    nodes: (nodes || []).map((node) => {
+      const definition = node.data?.definition;
+      const connectorId =
+        node.data?.connectorId ??
+        (connectorRequired(definition) ? defaultConnectorId(node.type) : null);
+      return {
+        id: node.id,
+        type: node.type,
+        version: 1,
+        position: node.position || { x: 0, y: 0 },
+        connector_id: connectorId,
+        parameters: node.data?.parameters || {},
+      };
+    }),
     edges: (edges || []).map((edge) => ({
       id: edge.id,
       source_node_id: edge.source,
