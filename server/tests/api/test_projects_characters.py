@@ -120,6 +120,13 @@ def test_character_texts_prompt_blocks_and_prompt_history_are_preserved(client):
     assert first_prompt.status_code == 201
     character = first_prompt.json()
     first_version = character["prompt_versions"][0]
+    assert first_version["blocks"] == [
+        {
+            "id": block_id,
+            "name": "Lumiere",
+            "text": "clair-obscur de chapiteau",
+        }
+    ]
 
     activated = client.post(
         f"{character_url}/prompts/{first_version['id']}/activate",
@@ -167,7 +174,7 @@ def test_character_texts_prompt_blocks_and_prompt_history_are_preserved(client):
     assert edited_text.json()["prompt_versions"][0] == first_version
 
 
-def test_prompt_blocks_referenced_by_history_are_immutable(client):
+def test_prompt_blocks_can_be_edited_and_deleted_even_when_referenced(client):
     project = client.post("/api/projects", json={"name": "Circus"}).json()
     character = client.post(
         f"/api/projects/{project['id']}/characters",
@@ -192,6 +199,14 @@ def test_prompt_blocks_referenced_by_history_are_immutable(client):
             "block_ids": [block["id"]],
         },
     ).json()
+    first_version = character["prompt_versions"][0]
+    assert first_version["blocks"] == [
+        {
+            "id": block["id"],
+            "name": "Palette",
+            "text": "bleu nocturne",
+        }
+    ]
 
     changed_block = client.patch(
         character_url,
@@ -202,6 +217,11 @@ def test_prompt_blocks_referenced_by_history_are_immutable(client):
             ],
         },
     )
+    assert changed_block.status_code == 200
+    assert changed_block.json()["prompt_blocks"][0]["text"] == "rouge vif"
+    assert changed_block.json()["prompt_versions"][0] == first_version
+
+    character = changed_block.json()
     removed_block = client.patch(
         character_url,
         json={
@@ -209,6 +229,11 @@ def test_prompt_blocks_referenced_by_history_are_immutable(client):
             "prompt_blocks": [],
         },
     )
+    assert removed_block.status_code == 200
+    assert removed_block.json()["prompt_blocks"] == []
+    assert removed_block.json()["prompt_versions"][0] == first_version
+
+    character = removed_block.json()
     unknown_block = client.post(
         f"{character_url}/prompts",
         json={
@@ -217,9 +242,6 @@ def test_prompt_blocks_referenced_by_history_are_immutable(client):
             "block_ids": [str(uuid4())],
         },
     )
-
-    assert changed_block.status_code == 409
-    assert removed_block.status_code == 409
     assert unknown_block.status_code == 422
 
 

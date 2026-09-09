@@ -298,9 +298,6 @@ export default function CharacterDetailView({ projectId, characterId }) {
     );
   }
 
-  const referencedBlockIds = new Set(
-    character.prompt_versions.flatMap((prompt) => prompt.block_ids),
-  );
   const promptHistory = [...character.prompt_versions].reverse();
 
   return (
@@ -466,11 +463,10 @@ export default function CharacterDetailView({ projectId, characterId }) {
         <SectionHeader
           eyebrow="03 / Modules"
           title="Blocs reutilisables"
-          description="Ajoutez des fragments optionnels. Un bloc utilise par une version devient immuable pour preserver l'historique."
+          description="Ajoutez des fragments optionnels. Leur contenu est copie dans chaque version qui les utilise, vous pouvez donc les modifier ou les supprimer librement."
         />
         <div className="space-y-3">
           {blocks.map((block, index) => {
-            const isReferenced = block.id && referencedBlockIds.has(block.id);
             return (
               <div
                 key={block.key}
@@ -484,7 +480,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
                       onChange={(event) =>
                         updateBlock(block.key, "name", event.target.value)
                       }
-                      disabled={isReferenced || isMutating}
+                      disabled={isMutating}
                       maxLength={120}
                       className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-black/40 px-3 text-white outline-none focus:border-accent disabled:cursor-not-allowed disabled:text-zinc-500"
                     />
@@ -496,7 +492,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
                       onChange={(event) =>
                         updateBlock(block.key, "text", event.target.value)
                       }
-                      disabled={isReferenced || isMutating}
+                      disabled={isMutating}
                       maxLength={4000}
                       rows={2}
                       className="mt-2 w-full resize-y rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 text-white outline-none focus:border-accent disabled:cursor-not-allowed disabled:text-zinc-500"
@@ -505,22 +501,12 @@ export default function CharacterDetailView({ projectId, characterId }) {
                   <button
                     type="button"
                     onClick={() => removeBlock(block.key)}
-                    disabled={isReferenced || isMutating}
-                    title={
-                      isReferenced
-                        ? "Ce bloc est utilise par une version de prompt"
-                        : undefined
-                    }
-                    className="min-h-11 self-end rounded-xl px-3 text-sm text-zinc-500 hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-35"
+                    disabled={isMutating}
+                    className="min-h-11 self-end rounded-xl px-3 text-sm text-zinc-500 hover:bg-red-500/10 hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-35"
                   >
                     Retirer
                   </button>
                 </div>
-                {isReferenced && (
-                  <p className="mt-2 text-xs text-zinc-600">
-                    Verrouille par les versions de prompt.
-                  </p>
-                )}
               </div>
             );
           })}
@@ -628,9 +614,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
             <div className="space-y-3">
               {promptHistory.map((prompt, index) => {
                 const isActive = character.active_prompt_version_id === prompt.id;
-                const promptBlocks = character.prompt_blocks.filter((block) =>
-                  prompt.block_ids.includes(block.id),
-                );
+                const promptBlocks = prompt.blocks || [];
                 return (
                   <article
                     key={prompt.id}

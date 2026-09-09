@@ -158,23 +158,6 @@ class CharacterRepository:
                     "prompt history is append-only and cannot be changed"
                 )
 
-            referenced_block_ids = {
-                block_id
-                for prompt in current.prompt_versions
-                for block_id in prompt.block_ids
-            }
-            current_blocks = {block.id: block for block in current.prompt_blocks}
-            saved_blocks = {block.id: block for block in character.prompt_blocks}
-            if any(
-                block_id not in saved_blocks
-                or saved_blocks[block_id].model_dump(mode="json")
-                != current_blocks[block_id].model_dump(mode="json")
-                for block_id in referenced_block_ids
-            ):
-                raise ConflictError(
-                    "prompt blocks referenced by history cannot be changed"
-                )
-
             updated = character.model_copy(
                 update={
                     "revision": character.revision + 1,

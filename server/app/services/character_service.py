@@ -4,6 +4,7 @@ from uuid import UUID
 from app.domain.models import (
     Character,
     PromptBlock,
+    PromptBlockSnapshot,
     PromptVersion,
     TextBlock,
     utc_now,
@@ -84,15 +85,27 @@ class CharacterService:
     ) -> Character:
         character = self.characters.get(project_id, character_id)
         self._check_revision(character.revision, expected_revision)
-        known_ids = {block.id for block in character.prompt_blocks}
-        if any(block_id not in known_ids for block_id in block_ids):
+        known = {block.id: block for block in character.prompt_blocks}
+        if any(block_id not in known for block_id in block_ids):
             raise ServiceValidationError(
                 "Le prompt reference un bloc inconnu de cette fiche."
             )
+        snapshots = [
+            PromptBlockSnapshot(
+                id=known[block_id].id,
+                name=known[block_id].name,
+                text=known[block_id].text,
+            )
+            for block_id in block_ids
+        ]
         data = character.model_dump()
         data["prompt_versions"] = [
             *character.prompt_versions,
-            PromptVersion(text=text.strip(), block_ids=block_ids),
+            PromptVersion(
+                text=text.strip(),
+                block_ids=block_ids,
+                blocks=snapshots,
+            ),
         ]
         return self.characters.save(Character.model_validate(data))
 
@@ -149,18 +162,6 @@ class CharacterService:
         changes: list[PromptBlockChange],
     ) -> list[PromptBlock]:
         existing = {block.id: block for block in character.prompt_blocks}
-        referenced_ids = {
-            block_id
-            for prompt in character.prompt_versions
-            for block_id in prompt.block_ids
-        }
-        supplied_ids = {change.id for change in changes if change.id is not None}
-        if not referenced_ids.issubset(supplied_ids):
-            raise ConflictError(
-                "Un bloc utilise par l'historique des prompts ne peut pas "
-                "etre supprime."
-            )
-
         merged = []
         for change in changes:
             name = change.name.strip()
@@ -172,12 +173,6 @@ class CharacterService:
             if current is None:
                 raise ServiceValidationError(
                     "Un bloc de prompt n'appartient pas a cette fiche."
-                )
-            if change.id in referenced_ids and (
-                name != current.name or text != current.text
-            ):
-                raise ConflictError(
-                    "Un bloc utilise par l'historique des prompts est immuable."
                 )
             merged.append(
                 PromptBlock(

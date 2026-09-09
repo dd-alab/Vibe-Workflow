@@ -31,6 +31,7 @@ const character = {
       id: "prompt-uuid",
       text: "Portrait serre.",
       block_ids: ["block-uuid"],
+      blocks: [{ id: "block-uuid", name: "Lumiere", text: "Clair-obscur doux." }],
       created_at: "2026-09-09T10:00:00Z",
     },
   ],
@@ -58,6 +59,23 @@ describe("CharacterDetailView", () => {
     expect(screen.getByText("Portrait serre.")).toBeInTheDocument();
     expect(screen.getByText("Version active")).toBeInTheDocument();
     expect(screen.queryByDisplayValue("Portrait serre.")).not.toBeInTheDocument();
+    expect(screen.getByText("Lumiere", { selector: "span" })).toBeInTheDocument();
+  });
+
+  it("lets reusable blocks referenced by a version stay editable", async () => {
+    getCharacter.mockResolvedValue(character);
+    render(
+      <CharacterDetailView
+        projectId="project-uuid"
+        characterId="character-uuid"
+      />,
+    );
+    const blockName = await screen.findByDisplayValue("Lumiere");
+
+    expect(blockName).toBeEnabled();
+    expect(
+      screen.queryByText("Verrouille par les versions de prompt."),
+    ).not.toBeInTheDocument();
   });
 
   it("creates a new prompt with selected reusable blocks", async () => {
@@ -71,6 +89,7 @@ describe("CharacterDetailView", () => {
           id: "new-prompt-uuid",
           text: "Portrait frontal.",
           block_ids: ["block-uuid"],
+          blocks: [{ id: "block-uuid", name: "Lumiere", text: "Clair-obscur doux." }],
           created_at: "2026-09-09T11:00:00Z",
         },
       ],

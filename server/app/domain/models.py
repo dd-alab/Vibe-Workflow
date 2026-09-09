@@ -99,10 +99,17 @@ class PromptBlock(DomainModel):
     updated_at: UtcDatetime = Field(default_factory=utc_now)
 
 
+class PromptBlockSnapshot(DomainModel):
+    id: UUID = Field(default_factory=uuid4)
+    name: str = Field(min_length=1, max_length=120)
+    text: str = Field(min_length=1, max_length=4000)
+
+
 class PromptVersion(DomainModel):
     id: UUID = Field(default_factory=uuid4)
     text: str = Field(min_length=1, max_length=12000)
     block_ids: list[UUID] = Field(default_factory=list)
+    blocks: list[PromptBlockSnapshot] = Field(default_factory=list)
     created_at: UtcDatetime = Field(default_factory=utc_now)
 
 
@@ -177,18 +184,11 @@ class Character(DomainModel):
             and self.selected_asset_id not in asset_ids
         ):
             raise ValueError("selected asset must reference an existing asset")
-        known_block_ids = set(block_ids)
         if any(
             len(prompt.block_ids) != len(set(prompt.block_ids))
             for prompt in self.prompt_versions
         ):
             raise ValueError("prompt versions cannot contain duplicate prompt blocks")
-        if any(
-            block_id not in known_block_ids
-            for prompt in self.prompt_versions
-            for block_id in prompt.block_ids
-        ):
-            raise ValueError("prompt versions must reference existing prompt blocks")
         return self
 
 
