@@ -5,14 +5,13 @@ import { WorkflowBuilder } from "workflow-builder";
 import "reactflow/dist/style.css";
 import "workflow-builder/dist/tailwind.css";
 
-import JobQueue from "../jobs/JobQueue";
-import { listCharacters } from "../../lib/api/characters";
+import { assetContentUrl } from "../../lib/api/assets";
+import { getCharacter, listCharacters } from "../../lib/api/characters";
+import { listConnectors } from "../../lib/api/connectors";
 import {
-  cancelJob,
   createWorkflowRun,
   getJob,
   getWorkflowRun,
-  retryJob,
 } from "../../lib/api/jobs";
 import {
   createWorkflow,
@@ -23,19 +22,75 @@ import {
 
 const TERMINAL_STATUSES = new Set(["completed", "failed", "cancelled"]);
 
+function nodeOutputsFromJobs(jobs) {
+  return jobs.reduce((outputs, job) => {
+    if (job.status !== "completed" || !job.node_id) {
+      return outputs;
+    }
+    const assetId = job.output_asset_ids?.[0];
+    if (!assetId) {
+      return outputs;
+    }
+    return {
+      ...outputs,
+      [job.node_id]: {
+        imageUrl: assetContentUrl(assetId),
+      },
+    };
+  }, {});
+}
+
+function characterPreview(character) {
+  if (!character) {
+    return null;
+  }
+  const activePrompt = (character.prompt_versions ?? []).find(
+    (prompt) => prompt.id === character.active_prompt_version_id,
+  );
+  return {
+    name: character.name,
+    shortTexts: (character.short_texts ?? []).map((item) => item.text),
+    activePromptText: activePrompt?.text || "",
+  };
+}
+
 export default function WorkflowEditorClient({ projectId, workflowId }) {
   const [workflow, setWorkflow] = useState(null);
   const [definitions, setDefinitions] = useState([]);
+  const [connectorOptions, setConnectorOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
-  const [characters, setCharacters] = useState([]);
   const [selectedCharacterId, setSelectedCharacterId] = useState("");
+  const [selectedCharacter, setSelectedCharacter] = useState(null);
   const [run, setRun] = useState(null);
   const [jobs, setJobs] = useState([]);
-  const [running, setRunning] = useState(false);
   const [runError, setRunError] = useState("");
+  const nodeOutputs = nodeOutputsFromJobs(jobs);
+
+  useEffect(() => {
+    if (!selectedCharacterId) {
+      setSelectedCharacter(null);
+      return undefined;
+    }
+    let cancelled = false;
+    getCharacter(projectId, selectedCharacterId)
+      .then((loadedCharacter) => {
+        if (!cancelled) {
+          setSelectedCharacter(loadedCharacter);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setSelectedCharacter(null);
+          setRunError(error.message);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, selectedCharacterId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,12 +98,18 @@ export default function WorkflowEditorClient({ projectId, workflowId }) {
       getWorkflow(projectId, workflowId),
       getWorkflowNodeDefinitions(),
       listCharacters(projectId),
+      listConnectors(),
     ])
-      .then(([loadedWorkflow, loadedDefinitions, loadedCharacters]) => {
+      .then(([
+        loadedWorkflow,
+        loadedDefinitions,
+        loadedCharacters,
+        loadedConnectors,
+      ]) => {
         if (!cancelled) {
           setWorkflow(loadedWorkflow);
           setDefinitions(loadedDefinitions);
-          setCharacters(loadedCharacters);
+          setConnectorOptions(loadedConnectors);
           setSelectedCharacterId((current) =>
             current || loadedCharacters[0]?.id || "",
           );
@@ -127,10 +188,9 @@ export default function WorkflowEditorClient({ projectId, workflowId }) {
 
   async function handleRun(currentWorkflow) {
     if (!selectedCharacterId) {
-      setRunError("Selectionnez un personnage avant execution.");
+      setRunError("Selectionnez un asset avant execution.");
       return;
     }
-    setRunning(true);
     setRunError("");
     try {
       const saved = currentWorkflow.id
@@ -141,32 +201,9 @@ export default function WorkflowEditorClient({ projectId, workflowId }) {
       const startedRun = await createWorkflowRun(projectId, {
         workflow_id: saved.id,
         character_id: selectedCharacterId,
+        background: true,
       });
       setRun(startedRun);
-    } catch (error) {
-      setRunError(error.message);
-    } finally {
-      setRunning(false);
-    }
-  }
-
-  async function handleCancelJob(jobId) {
-    setRunError("");
-    try {
-      const updated = await cancelJob(jobId);
-      setJobs((items) =>
-        items.map((item) => (item.id === updated.id ? updated : item)),
-      );
-    } catch (error) {
-      setRunError(error.message);
-    }
-  }
-
-  async function handleRetryJob(jobId) {
-    setRunError("");
-    try {
-      const retried = await retryJob(jobId);
-      setJobs((items) => [...items, retried]);
     } catch (error) {
       setRunError(error.message);
     }
@@ -193,27 +230,19 @@ export default function WorkflowEditorClient({ projectId, workflowId }) {
       <WorkflowBuilder
         workflow={workflow}
         nodeDefinitions={definitions}
+        connectorOptions={connectorOptions}
+        nodeOutputs={nodeOutputs}
+        characterPreview={characterPreview(selectedCharacter)}
         onChange={setWorkflow}
         onSave={handleSave}
         onRun={handleRun}
       />
-      <JobQueue
-        characters={characters}
-        selectedCharacterId={selectedCharacterId}
-        onSelectedCharacterIdChange={setSelectedCharacterId}
-        run={run}
-        jobs={jobs}
-        running={running}
-        error={runError}
-        onCancelJob={handleCancelJob}
-        onRetryJob={handleRetryJob}
-      />
-      {saveError && (
+      {(saveError || runError) && (
         <div
           role="alert"
           className="pointer-events-none fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-xl border border-red-500/20 bg-red-950/80 px-4 py-2 text-sm text-red-200"
         >
-          {saveError}
+          {saveError || runError}
         </div>
       )}
     </div>

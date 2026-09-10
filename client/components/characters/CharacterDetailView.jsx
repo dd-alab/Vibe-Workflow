@@ -118,7 +118,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
     event.preventDefault();
     const name = nameDraft.trim();
     if (!name) {
-      setNameError("Saisissez un nom de personnage.");
+      setNameError("Saisissez un nom d'asset.");
       return;
     }
     setNameError("");
@@ -292,7 +292,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
         <button
           type="button"
           onClick={retry}
-          className="mt-4 min-h-11 rounded-xl border border-white/10 px-4 text-sm font-medium hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
+          className="mt-4 min-h-11 min-w-32 whitespace-nowrap rounded-xl border border-white/10 px-5 text-sm font-medium hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
         >
           Reessayer
         </button>
@@ -314,7 +314,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
         <div className="mt-2 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-accent-soft">
-              Fiche personnage
+              Fiche asset
             </p>
             <h1 className="break-words [overflow-wrap:anywhere] text-3xl font-semibold tracking-tight text-white md:text-4xl">
               {character.name}
@@ -328,7 +328,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
               type="button"
               onClick={retry}
               disabled={isMutating}
-              className="min-h-11 rounded-xl border border-white/10 px-4 text-sm text-zinc-400 hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-11 min-w-28 whitespace-nowrap rounded-xl border border-white/10 px-5 text-sm text-zinc-400 hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
             >
               Recharger
             </button>
@@ -336,7 +336,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
               type="button"
               onClick={() => setRenaming((visible) => !visible)}
               disabled={isMutating}
-              className="min-h-11 rounded-xl border border-white/10 px-4 text-sm font-medium text-zinc-200 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-11 min-w-32 whitespace-nowrap rounded-xl border border-white/10 px-5 text-sm font-medium text-zinc-200 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
             >
               Renommer
             </button>
@@ -350,7 +350,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
           className="rounded-2xl border border-accent/20 bg-accent/5 p-4"
         >
           <label className="block text-sm font-medium text-zinc-200">
-            Nouveau nom du personnage
+            Nouveau nom de l&apos;asset
             <input
               value={nameDraft}
               onChange={(event) => setNameDraft(event.target.value)}
@@ -363,7 +363,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
             <button
               type="submit"
               disabled={isMutating}
-              className="min-h-11 rounded-xl bg-accent px-4 text-sm font-semibold hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-11 min-w-40 whitespace-nowrap rounded-xl bg-accent px-6 text-sm font-semibold hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
             >
               {savingName ? "Enregistrement..." : "Enregistrer"}
             </button>
@@ -371,7 +371,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
               type="button"
               onClick={() => setRenaming(false)}
               disabled={isMutating}
-              className="min-h-11 rounded-xl px-4 text-sm text-zinc-400 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-11 min-w-28 whitespace-nowrap rounded-xl px-5 text-sm text-zinc-400 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Annuler
             </button>
@@ -388,7 +388,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
         <SectionHeader
           eyebrow="01 / References"
           title="Images de reference"
-          description="Importez les images qui guideront ce personnage. Elles sont copiees dans sa bibliotheque locale."
+          description="Importez les images qui guideront cet asset. Elles sont copiees dans sa bibliotheque locale."
         />
         <ReferenceLibrary
           projectId={projectId}
@@ -422,24 +422,24 @@ export default function CharacterDetailView({ projectId, characterId }) {
         />
         <div className="space-y-2">
           {texts.map((item, index) => (
-            <div key={item.key} className="flex flex-col gap-2 sm:flex-row sm:items-start">
-              <label className="min-w-0 flex-1 text-sm text-zinc-300">
+            <div key={item.key} className="space-y-2">
+              <label className="block text-sm text-zinc-300">
                 <span className="sr-only">Texte court {index + 1}</span>
                 <textarea
                   value={item.text}
                   onChange={(event) => updateText(item.key, event.target.value)}
                   disabled={isMutating}
                   maxLength={1000}
-                  rows={3}
+                  rows={6}
                   placeholder="Silhouette, attitude, histoire ou intention..."
-                  className="w-full resize-y rounded-xl border border-white/10 bg-black/35 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-zinc-600 focus:border-accent focus:ring-2 focus:ring-accent/20"
+                  className="min-h-40 w-full resize-y rounded-xl border border-white/10 bg-black/35 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-zinc-600 focus:border-accent focus:ring-2 focus:ring-accent/20"
                 />
               </label>
               <button
                 type="button"
                 onClick={() => removeText(item.key)}
                 disabled={isMutating}
-                className="min-h-11 rounded-xl px-3 text-sm text-zinc-500 hover:bg-red-500/10 hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-11 min-w-28 whitespace-nowrap rounded-xl px-4 text-sm text-zinc-500 hover:bg-red-500/10 hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Retirer
               </button>
@@ -456,7 +456,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
             type="button"
             onClick={addText}
             disabled={isMutating}
-            className="min-h-11 rounded-xl border border-white/10 px-4 text-sm text-zinc-300 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-11 min-w-36 whitespace-nowrap rounded-xl border border-white/10 px-5 text-sm text-zinc-300 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
           >
             Ajouter un texte
           </button>
@@ -464,7 +464,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
             type="button"
             onClick={saveTexts}
             disabled={isMutating}
-            className="min-h-11 rounded-xl bg-accent px-4 text-sm font-semibold hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:opacity-50"
+            className="min-h-11 min-w-44 whitespace-nowrap rounded-xl bg-accent px-6 text-sm font-semibold hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:opacity-50"
           >
             {savingTexts ? "Enregistrement..." : "Enregistrer les textes"}
           </button>
@@ -519,7 +519,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
                     type="button"
                     onClick={() => removeBlock(block.key)}
                     disabled={isMutating}
-                    className="min-h-11 self-end rounded-xl px-3 text-sm text-zinc-500 hover:bg-red-500/10 hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-35"
+                    className="min-h-11 min-w-28 self-end whitespace-nowrap rounded-xl px-4 text-sm text-zinc-500 hover:bg-red-500/10 hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-35"
                   >
                     Retirer
                   </button>
@@ -538,7 +538,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
             type="button"
             onClick={addBlock}
             disabled={isMutating}
-            className="min-h-11 rounded-xl border border-white/10 px-4 text-sm text-zinc-300 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-11 min-w-36 whitespace-nowrap rounded-xl border border-white/10 px-5 text-sm text-zinc-300 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
           >
             Ajouter un bloc
           </button>
@@ -546,7 +546,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
             type="button"
             onClick={saveBlocks}
             disabled={isMutating}
-            className="min-h-11 rounded-xl bg-accent px-4 text-sm font-semibold hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:opacity-50"
+            className="min-h-11 min-w-44 whitespace-nowrap rounded-xl bg-accent px-6 text-sm font-semibold hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:opacity-50"
           >
             {savingBlocks ? "Enregistrement..." : "Enregistrer les blocs"}
           </button>
@@ -605,7 +605,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
           <button
             type="submit"
             disabled={isMutating}
-            className="mt-4 min-h-11 rounded-xl bg-accent px-5 text-sm font-semibold hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:opacity-50"
+            className="mt-4 min-h-11 min-w-40 whitespace-nowrap rounded-xl bg-accent px-6 text-sm font-semibold hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:opacity-50"
           >
             {savingPrompt ? "Creation..." : "Creer la version"}
           </button>
@@ -657,7 +657,7 @@ export default function CharacterDetailView({ projectId, characterId }) {
                           onClick={() => activatePrompt(prompt.id)}
                           disabled={isMutating}
                           aria-label={`Activer la version ${promptHistory.length - index}`}
-                          className="min-h-11 rounded-xl border border-white/10 px-3 text-xs font-medium text-zinc-300 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:opacity-50"
+                          className="min-h-11 min-w-32 whitespace-nowrap rounded-xl border border-white/10 px-4 text-xs font-medium text-zinc-300 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:opacity-50"
                         >
                           {activatingPromptId === prompt.id
                             ? "Activation..."

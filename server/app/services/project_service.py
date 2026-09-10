@@ -30,13 +30,23 @@ class ProjectService:
         project_id: UUID,
         *,
         expected_revision: int,
-        name: str,
+        name: str | None = None,
+        notes_1: str | None = None,
+        notes_2: str | None = None,
     ) -> Project:
         project = self.projects.get(project_id)
         self._check_revision(project.revision, expected_revision)
         data = project.model_dump()
-        data["name"] = name.strip()
+        if name is not None:
+            data["name"] = name.strip()
+        if notes_1 is not None:
+            data["notes_1"] = notes_1
+        if notes_2 is not None:
+            data["notes_2"] = notes_2
         return self.projects.save(Project.model_validate(data))
+
+    def delete_project(self, project_id: UUID) -> None:
+        self.projects.delete(project_id)
 
     @staticmethod
     def _check_revision(current: int, expected: int) -> None:

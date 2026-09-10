@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, BackgroundTasks, Depends, status
 from pydantic import BaseModel, ConfigDict
 
 from app.domain.models import WorkflowRun
@@ -16,6 +16,7 @@ class RunCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     workflow_id: UUID
     character_id: UUID | None = None
+    background: bool = False
 
 
 RunServiceDependency = Annotated[RunService, Depends(get_run_service)]
@@ -29,8 +30,17 @@ RunServiceDependency = Annotated[RunService, Depends(get_run_service)]
 def create_run(
     project_id: UUID,
     payload: RunCreate,
+    background_tasks: BackgroundTasks,
     service: RunServiceDependency,
 ) -> WorkflowRun:
+    if payload.background:
+        run = service.create_queued_run(
+            project_id,
+            workflow_id=payload.workflow_id,
+            character_id=payload.character_id,
+        )
+        background_tasks.add_task(service.execute_run, project_id, run.id)
+        return run
     return service.create_run(
         project_id,
         workflow_id=payload.workflow_id,

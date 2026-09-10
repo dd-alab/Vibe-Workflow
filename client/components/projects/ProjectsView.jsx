@@ -74,8 +74,8 @@ export default function ProjectsView() {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="max-w-3xl">
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-accent-soft">
             Bibliotheque locale
           </p>
@@ -83,19 +83,20 @@ export default function ProjectsView() {
             Projets
           </h1>
           <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-400">
-            Une serie regroupe ses personnages, ses prompts et toute sa production.
+            Une serie regroupe ses assets, ses prompts et toute sa production.
           </p>
+          {!loading && !loadError && (
+            <p className="mt-3 text-sm tabular-nums text-zinc-500">
+              {projects.length} projet{projects.length > 1 ? "s" : ""}
+            </p>
+          )}
         </div>
-        {!loading && !loadError && (
-          <p className="text-sm tabular-nums text-zinc-500">
-            {projects.length} projet{projects.length > 1 ? "s" : ""}
-          </p>
-        )}
-      </header>
 
-      <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 md:p-5">
-        <form onSubmit={handleCreate} className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <label className="min-w-0 flex-1 text-sm font-medium text-zinc-200">
+        <form
+          onSubmit={handleCreate}
+          className="w-full max-w-xl rounded-2xl border border-white/10 bg-white/[0.035] p-4 lg:max-w-sm"
+        >
+          <label className="block text-sm font-medium text-zinc-200">
             Nom du projet
             <input
               value={name}
@@ -108,17 +109,17 @@ export default function ProjectsView() {
           <button
             type="submit"
             disabled={submitting}
-            className="min-h-11 rounded-xl bg-accent px-5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-11 min-w-40 whitespace-nowrap rounded-xl bg-accent px-6 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? "Creation..." : "Creer le projet"}
           </button>
+          {formError && (
+            <p role="alert" className="mt-3 text-sm text-red-300">
+              {formError}
+            </p>
+          )}
         </form>
-        {formError && (
-          <p role="alert" className="mt-3 text-sm text-red-300">
-            {formError}
-          </p>
-        )}
-      </section>
+      </header>
 
       {loading && (
         <div className="grid min-h-52 place-items-center rounded-2xl border border-white/10 bg-white/[0.02] text-sm text-zinc-400">
@@ -132,7 +133,7 @@ export default function ProjectsView() {
           <button
             type="button"
             onClick={retry}
-            className="mt-4 min-h-11 rounded-xl border border-white/10 px-4 text-sm font-medium text-white hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
+            className="mt-4 min-h-11 min-w-32 whitespace-nowrap rounded-xl border border-white/10 px-5 text-sm font-medium text-white hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
           >
             Reessayer
           </button>
@@ -183,7 +184,7 @@ export default function ProjectsView() {
                 </span>
               </div>
               <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-3 text-xs">
-                <span className="text-zinc-500">Personnages</span>
+                <span className="text-zinc-500">Assets</span>
                 <span className="font-medium tabular-nums text-zinc-300">
                   {project.characters?.length ?? 0}
                 </span>

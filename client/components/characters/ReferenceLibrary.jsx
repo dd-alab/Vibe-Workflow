@@ -214,7 +214,7 @@ export default function ReferenceLibrary({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={controlsDisabled}
-          className="mt-3 min-h-11 rounded-xl bg-accent px-5 text-sm font-semibold text-white hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-3 min-h-11 min-w-40 whitespace-nowrap rounded-xl bg-accent px-6 text-sm font-semibold text-white hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
         >
           Choisir des images
         </button>
@@ -296,7 +296,7 @@ export default function ReferenceLibrary({
                             ids.filter((id) => id !== asset.id),
                           )
                         }
-                        className="mt-3 min-h-11 rounded-lg border border-red-500/20 px-3 text-zinc-200 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
+                        className="mt-3 min-h-11 min-w-28 whitespace-nowrap rounded-lg border border-red-500/20 px-4 text-zinc-200 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
                       >
                         Reessayer
                       </button>
@@ -332,7 +332,7 @@ export default function ReferenceLibrary({
                     onClick={() => handleDelete(asset, index)}
                     disabled={controlsDisabled}
                     aria-label={`Supprimer la reference ${index + 1}`}
-                    className="mt-3 min-h-11 w-full rounded-lg border border-white/10 px-2 text-xs text-zinc-400 hover:border-red-500/25 hover:bg-red-500/5 hover:text-red-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
+                    className="mt-3 min-h-11 w-full whitespace-nowrap rounded-lg border border-white/10 px-3 text-xs text-zinc-400 hover:border-red-500/25 hover:bg-red-500/5 hover:text-red-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {deletingAssetId === asset.id ? "Suppression..." : "Supprimer"}
                   </button>

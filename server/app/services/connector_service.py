@@ -7,10 +7,12 @@ class ConnectorService:
 
     def check(self, connector_id: str) -> dict:
         connector = get_connector(connector_id)
+        status = connector.check()
         return {
             "id": connector.id,
             "kind": connector.kind.value,
-            "available": True,
+            "available": status.get("available", True),
             "capabilities": connector.capabilities,
             "estimated_cost": None,
+            **{key: value for key, value in status.items() if key != "available"},
         }

@@ -70,13 +70,13 @@ export default function JobQueue({
       </div>
 
       <label className="mt-4 block text-xs font-medium text-zinc-300">
-        Personnage
+        Asset
         <select
           value={selectedCharacterId}
           onChange={(event) => onSelectedCharacterIdChange(event.target.value)}
           className="mt-2 min-h-10 w-full rounded-xl border border-white/10 bg-black/40 px-3 text-sm text-white outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
         >
-          <option value="">Selectionner un personnage</option>
+          <option value="">Selectionner un asset</option>
           {characters.map((character) => (
             <option key={character.id} value={character.id}>
               {character.name}
@@ -149,7 +149,7 @@ export default function JobQueue({
         </div>
       ) : (
         <p className="mt-4 rounded-xl border border-dashed border-white/10 p-3 text-sm text-zinc-500">
-          Choisissez un personnage puis cliquez sur Executer.
+          Choisissez un asset puis cliquez sur Executer.
         </p>
       )}
 

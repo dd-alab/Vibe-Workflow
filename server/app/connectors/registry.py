@@ -1,10 +1,13 @@
 from .base import Connector
 from .mock_generation import MockGenerationConnector
 from .mock_upscale import MockUpscaleConnector
+from .muapi import MuApiGenerationConnector, MuApiUpscaleConnector
 
 CONNECTORS: dict[str, Connector] = {
     MockGenerationConnector.id: MockGenerationConnector(),
     MockUpscaleConnector.id: MockUpscaleConnector(),
+    MuApiGenerationConnector.id: MuApiGenerationConnector(),
+    MuApiUpscaleConnector.id: MuApiUpscaleConnector(),
 }
 
 

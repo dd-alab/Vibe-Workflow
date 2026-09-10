@@ -13,7 +13,7 @@ from app.domain.validation import (
 def slugify(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", value)
     ascii_value = normalized.encode("ascii", "ignore").decode("ascii")
-    slug = re.sub(r"[^a-z0-9]+", "-", ascii_value.lower()).strip("-")
+    slug = re.sub(r"[^a-z0-9]+", "_", ascii_value.lower()).strip("_")
     return validate_slug(slug)
 
 

@@ -48,6 +48,36 @@ def test_project_api_validates_names_maps_missing_resources_and_revisions(client
     assert "recharger" in stale.json()["detail"].lower()
 
 
+def test_project_notes_are_patchable_without_renaming(client):
+    project = client.post("/api/projects", json={"name": "Circus Portraits"}).json()
+
+    edited = client.patch(
+        f"/api/projects/{project['id']}",
+        json={
+            "expected_revision": project["revision"],
+            "notes_1": "Liste brute des intentions.",
+            "notes_2": "Contraintes image.",
+        },
+    )
+
+    assert edited.status_code == 200
+    data = edited.json()
+    assert data["name"] == "Circus Portraits"
+    assert data["notes_1"] == "Liste brute des intentions."
+    assert data["notes_2"] == "Contraintes image."
+    assert data["revision"] == project["revision"] + 1
+
+
+def test_project_can_be_deleted(client):
+    project = client.post("/api/projects", json={"name": "Projet a effacer"}).json()
+
+    deleted = client.delete(f"/api/projects/{project['id']}")
+
+    assert deleted.status_code == 204
+    assert client.get(f"/api/projects/{project['id']}").status_code == 404
+    assert client.get("/api/projects").json() == []
+
+
 @pytest.mark.parametrize("name", ["CON", "漢字", "x" * 120])
 def test_project_api_rejects_names_that_cannot_become_safe_slugs(client, name):
     response = client.post("/api/projects", json={"name": name})

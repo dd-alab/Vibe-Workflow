@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from uuid import UUID
 
@@ -7,6 +8,8 @@ from app.domain.models import Job, RunStatus, utc_now
 from app.repositories.job_repository import JobRepository
 
 from .errors import ServiceValidationError
+
+logger = logging.getLogger(__name__)
 
 
 class JobRunner:
@@ -56,6 +59,23 @@ class JobRunner:
         job = self.jobs.locate(job_id)
         return self.retry(job.project_id, job.id)
 
+    def add_output_asset(
+        self,
+        project_id: UUID,
+        job_id: UUID,
+        asset_id: UUID,
+    ) -> Job:
+        job = self.jobs.get(project_id, job_id)
+        if asset_id in job.output_asset_ids:
+            return job
+        updated = job.model_copy(
+            update={
+                "output_asset_ids": [*job.output_asset_ids, asset_id],
+                "updated_at": utc_now(),
+            }
+        )
+        return self._save(project_id, updated)
+
     def cancel_job(self, project_id: UUID, job_id: UUID) -> Job:
         job = self.jobs.get(project_id, job_id)
         if job.status not in (RunStatus.QUEUED, RunStatus.RUNNING):
@@ -100,6 +120,13 @@ class JobRunner:
         )
         running = self._transition(job, RunStatus.RUNNING)
         running = self._save(project_id, running)
+        logger.info(
+            "job started id=%s connector=%s node=%s run=%s",
+            job.id,
+            job.connector_id,
+            job.node_id,
+            job.run_id,
+        )
         try:
             submission = connector.submit(job.parameters, context)
             status = connector.poll(submission)
@@ -115,6 +142,12 @@ class JobRunner:
                 }
             )
             self._save(project_id, updated)
+            logger.info(
+                "job completed id=%s connector=%s output=%s",
+                job.id,
+                job.connector_id,
+                output_paths,
+            )
             return result
         except Exception as error:
             message = connector.normalize_error(error)
@@ -123,6 +156,13 @@ class JobRunner:
                 update={"error": message, "updated_at": utc_now()}
             )
             self._save(project_id, failed)
+            logger.exception(
+                "job failed id=%s connector=%s node=%s error=%s",
+                job.id,
+                job.connector_id,
+                job.node_id,
+                message,
+            )
             raise
 
     def recover_interrupted(self, project_id: UUID) -> list[Job]:

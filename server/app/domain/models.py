@@ -66,6 +66,8 @@ class Project(DomainModel):
     name: str = Field(min_length=1, max_length=120)
     slug: str
     revision: int = Field(default=0, ge=0)
+    notes_1: str = Field(default="", max_length=12000)
+    notes_2: str = Field(default="", max_length=12000)
     characters: list[CharacterReference] = Field(default_factory=list)
     created_at: UtcDatetime = Field(default_factory=utc_now)
     updated_at: UtcDatetime = Field(default_factory=utc_now)

@@ -22,13 +22,17 @@ export function canConnect(
   const targetPort = targetDefinition.inputs.find(
     (port) => port.name === targetHandle,
   );
-  if (!sourcePort || !targetPort) {
+  const dynamicTargetPort =
+    targetDefinition.type === "prompt_concatenator" && /^prompt_\d+$/.test(targetHandle)
+      ? { name: targetHandle, type: "prompt" }
+      : null;
+  if (!sourcePort || (!targetPort && !dynamicTargetPort)) {
     return false;
   }
   if (sourceNode.id === targetNode.id) {
     return false;
   }
-  return sourcePort.type === targetPort.type;
+  return sourcePort.type === (targetPort || dynamicTargetPort).type;
 }
 
 function normalizeEdge(edge) {

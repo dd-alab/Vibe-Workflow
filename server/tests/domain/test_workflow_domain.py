@@ -7,12 +7,14 @@ from app.domain.workflow import (
 )
 
 
-def test_registry_defines_seven_v1_nodes() -> None:
+def test_registry_defines_v1_nodes() -> None:
     types = {definition.type for definition in NODE_DEFINITIONS}
 
     assert types == {
         "character_input",
         "prompt_variant",
+        "prompt_concatenator",
+        "text_iterator",
         "image_generation",
         "result_set",
         "selection",

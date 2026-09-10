@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   createCharacter,
   listCharacters,
   updateCharacter,
 } from "../../lib/api/characters";
-import { getProject, updateProject } from "../../lib/api/projects";
+import { deleteProject, getProject, updateProject } from "../../lib/api/projects";
+
+const DELETE_CONFIRMATION_TEXT = "efface ce projet";
 
 function formatDate(value) {
   return new Intl.DateTimeFormat("fr-FR", {
@@ -47,10 +49,21 @@ export default function ProjectDetailView({ projectId }) {
   const [renamingProject, setRenamingProject] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [projectError, setProjectError] = useState("");
+  const [projectNotes, setProjectNotes] = useState({ notes_1: "", notes_2: "" });
+  const [notesStatus, setNotesStatus] = useState("idle");
+  const [notesError, setNotesError] = useState("");
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deletingProject, setDeletingProject] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const [renameTarget, setRenameTarget] = useState(null);
   const [renameName, setRenameName] = useState("");
   const [renameError, setRenameError] = useState("");
   const renameInputRef = useRef(null);
+  const projectRef = useRef(null);
+  const notesTimerRef = useRef(null);
+  const notesInFlightRef = useRef(false);
+  const pendingNotesRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,7 +71,12 @@ export default function ProjectDetailView({ projectId }) {
       .then(([loadedProject, loadedCharacters]) => {
         if (!cancelled) {
           setProject(loadedProject);
+          projectRef.current = loadedProject;
           setProjectName(loadedProject.name);
+          setProjectNotes({
+            notes_1: loadedProject.notes_1 ?? "",
+            notes_2: loadedProject.notes_2 ?? "",
+          });
           setCharacters(loadedCharacters);
           setLoadError("");
         }
@@ -84,6 +102,76 @@ export default function ProjectDetailView({ projectId }) {
     }
   }, [renameTarget]);
 
+  useEffect(() => {
+    projectRef.current = project;
+  }, [project]);
+
+  const savePendingNotes = useCallback(async () => {
+    if (notesInFlightRef.current) {
+      return;
+    }
+    const notes = pendingNotesRef.current;
+    const currentProject = projectRef.current;
+    if (!notes || !currentProject) {
+      return;
+    }
+
+    pendingNotesRef.current = null;
+    notesInFlightRef.current = true;
+    setNotesStatus("saving");
+    setNotesError("");
+    try {
+      const updated = await updateProject(projectId, {
+        expected_revision: currentProject.revision,
+        notes_1: notes.notes_1,
+        notes_2: notes.notes_2,
+      });
+      projectRef.current = updated;
+      setProject(updated);
+      if (!pendingNotesRef.current) {
+        setNotesStatus("saved");
+      }
+    } catch (error) {
+      pendingNotesRef.current = notes;
+      setNotesStatus("error");
+      setNotesError(error.message);
+    } finally {
+      notesInFlightRef.current = false;
+      if (pendingNotesRef.current) {
+        window.clearTimeout(notesTimerRef.current);
+        notesTimerRef.current = window.setTimeout(() => {
+          savePendingNotes();
+        }, 700);
+      }
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    if (!project) {
+      return undefined;
+    }
+    const savedNotes = {
+      notes_1: project.notes_1 ?? "",
+      notes_2: project.notes_2 ?? "",
+    };
+    if (
+      projectNotes.notes_1 === savedNotes.notes_1 &&
+      projectNotes.notes_2 === savedNotes.notes_2
+    ) {
+      return undefined;
+    }
+
+    pendingNotesRef.current = projectNotes;
+    setNotesStatus("pending");
+    setNotesError("");
+    window.clearTimeout(notesTimerRef.current);
+    notesTimerRef.current = window.setTimeout(() => {
+      savePendingNotes();
+    }, 700);
+
+    return () => window.clearTimeout(notesTimerRef.current);
+  }, [project, projectNotes, savePendingNotes]);
+
   function retry() {
     setLoading(true);
     setReloadKey((key) => key + 1);
@@ -93,7 +181,7 @@ export default function ProjectDetailView({ projectId }) {
     event.preventDefault();
     const name = characterName.trim();
     if (!name) {
-      setCreateError("Saisissez un nom de personnage.");
+      setCreateError("Saisissez un nom d'asset.");
       return;
     }
     setCreating(true);
@@ -121,11 +209,40 @@ export default function ProjectDetailView({ projectId }) {
         expected_revision: project.revision,
         name,
       });
+      projectRef.current = updated;
       setProject(updated);
       setProjectName(updated.name);
       setRenamingProject(false);
     } catch (error) {
       setProjectError(error.message);
+    }
+  }
+
+  function beginProjectDelete() {
+    if (!window.confirm("Etes-vous certain de vouloir supprimer ce projet ?")) {
+      return;
+    }
+    setDeleteConfirmation("");
+    setDeleteError("");
+    setConfirmingDelete(true);
+  }
+
+  async function handleProjectDelete(event) {
+    event.preventDefault();
+    if (deleteConfirmation !== DELETE_CONFIRMATION_TEXT) {
+      setDeleteError(`Recopiez exactement "${DELETE_CONFIRMATION_TEXT}".`);
+      return;
+    }
+    window.clearTimeout(notesTimerRef.current);
+    pendingNotesRef.current = null;
+    setDeletingProject(true);
+    setDeleteError("");
+    try {
+      await deleteProject(projectId);
+      router.push("/projects");
+    } catch (error) {
+      setDeleteError(error.message);
+      setDeletingProject(false);
     }
   }
 
@@ -139,7 +256,7 @@ export default function ProjectDetailView({ projectId }) {
     event.preventDefault();
     const name = renameName.trim();
     if (!name) {
-      setRenameError("Saisissez un nom de personnage.");
+      setRenameError("Saisissez un nom d'asset.");
       return;
     }
     try {
@@ -172,7 +289,7 @@ export default function ProjectDetailView({ projectId }) {
         <button
           type="button"
           onClick={retry}
-          className="mt-4 min-h-11 rounded-xl border border-white/10 px-4 text-sm font-medium hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
+          className="mt-4 min-h-11 min-w-32 whitespace-nowrap rounded-xl border border-white/10 px-5 text-sm font-medium hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
         >
           Reessayer
         </button>
@@ -183,13 +300,7 @@ export default function ProjectDetailView({ projectId }) {
   return (
     <div className="space-y-5">
       <header>
-        <Link
-          href="/projects"
-          className="inline-flex min-h-11 items-center text-sm text-zinc-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
-        >
-          Retour aux projets
-        </Link>
-        <div className="mt-2 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="max-w-3xl">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-accent-soft">
               Projet
@@ -201,25 +312,32 @@ export default function ProjectDetailView({ projectId }) {
               {characters.length}/30 fiches preparees
             </p>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <Link
               href={`/projects/${projectId}/gallery`}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/10 px-4 text-sm font-medium text-zinc-200 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
+              className="inline-flex min-h-11 min-w-28 items-center justify-center whitespace-nowrap rounded-xl border border-white/10 px-5 text-sm font-medium text-zinc-200 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
             >
               Galerie
             </Link>
             <Link
               href={`/projects/${projectId}/workflows`}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/10 px-4 text-sm font-medium text-zinc-200 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
+              className="inline-flex min-h-11 min-w-28 items-center justify-center whitespace-nowrap rounded-xl border border-white/10 px-5 text-sm font-medium text-zinc-200 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
             >
               Workflows
             </Link>
             <button
               type="button"
               onClick={() => setRenamingProject((visible) => !visible)}
-              className="min-h-11 self-start rounded-xl border border-white/10 px-4 text-sm font-medium text-zinc-200 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus lg:self-auto"
+              className="min-h-11 min-w-44 self-start whitespace-nowrap rounded-xl border border-white/10 px-5 text-sm font-medium text-zinc-200 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
             >
               Renommer le projet
+            </button>
+            <button
+              type="button"
+              onClick={beginProjectDelete}
+              className="min-h-11 min-w-44 self-start whitespace-nowrap rounded-xl border border-red-500/20 px-5 text-sm font-medium text-red-200 hover:bg-red-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
+            >
+              Supprimer le projet
             </button>
           </div>
         </div>
@@ -242,14 +360,14 @@ export default function ProjectDetailView({ projectId }) {
           <div className="mt-3 flex gap-2">
             <button
               type="submit"
-              className="min-h-11 rounded-xl bg-accent px-4 text-sm font-semibold hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
+              className="min-h-11 min-w-36 whitespace-nowrap rounded-xl bg-accent px-6 text-sm font-semibold hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
             >
               Enregistrer
             </button>
             <button
               type="button"
               onClick={() => setRenamingProject(false)}
-              className="min-h-11 rounded-xl px-4 text-sm text-zinc-400 hover:bg-white/5 hover:text-white"
+              className="min-h-11 min-w-28 whitespace-nowrap rounded-xl px-5 text-sm text-zinc-400 hover:bg-white/5 hover:text-white"
             >
               Annuler
             </button>
@@ -262,42 +380,144 @@ export default function ProjectDetailView({ projectId }) {
         </form>
       )}
 
-      <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 md:p-5">
-        <div className="mb-3">
-          <h2 className="text-lg font-semibold text-white">Nouveau personnage</h2>
-          <p className="mt-1 text-sm text-zinc-500">
-            Creez une fiche vide, puis ajoutez ses textes et ses prompts.
+      {confirmingDelete && (
+        <form
+          onSubmit={handleProjectDelete}
+          className="rounded-2xl border border-red-500/20 bg-red-500/5 p-4"
+        >
+          <p className="text-sm font-medium text-red-200">
+            Suppression definitive du projet {project.name}
           </p>
-        </div>
-        <form onSubmit={handleCreate} className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <label className="min-w-0 flex-1 text-sm font-medium text-zinc-200">
-            Nom du personnage
+          <p className="mt-1 text-sm text-zinc-500">
+            Cette action supprimera le dossier local du projet et ses donnees.
+          </p>
+          <label className="mt-3 block text-sm font-medium text-zinc-200">
+            Confirmation
             <input
-              value={characterName}
-              onChange={(event) => setCharacterName(event.target.value)}
-              maxLength={120}
-              placeholder="Auguste melancolique"
-              className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-white outline-none placeholder:text-zinc-600 focus:border-accent focus:ring-2 focus:ring-accent/20"
+              value={deleteConfirmation}
+              onChange={(event) => setDeleteConfirmation(event.target.value)}
+              placeholder={DELETE_CONFIRMATION_TEXT}
+              className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-white outline-none placeholder:text-zinc-600 focus:border-red-300 focus:ring-2 focus:ring-red-500/20"
             />
           </label>
-          <button
-            type="submit"
-            disabled={creating}
-            className="min-h-11 rounded-xl bg-accent px-5 text-sm font-semibold text-white hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {creating ? "Creation..." : "Creer et ouvrir"}
-          </button>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <button
+              type="submit"
+              disabled={
+                deletingProject || deleteConfirmation !== DELETE_CONFIRMATION_TEXT
+              }
+              className="min-h-11 min-w-44 whitespace-nowrap rounded-xl bg-red-700 px-6 text-sm font-semibold text-white hover:bg-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {deletingProject ? "Suppression..." : "Supprimer definitivement"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmingDelete(false);
+                setDeleteConfirmation("");
+                setDeleteError("");
+              }}
+              className="min-h-11 min-w-28 whitespace-nowrap rounded-xl px-5 text-sm text-zinc-400 hover:bg-white/5 hover:text-white"
+            >
+              Annuler
+            </button>
+          </div>
+          {deleteError && (
+            <p role="alert" className="mt-3 text-sm text-red-300">
+              {deleteError}
+            </p>
+          )}
         </form>
-        {createError && (
-          <p role="alert" className="mt-3 text-sm text-red-300">
-            {createError}
-          </p>
-        )}
+      )}
+
+      <section className="grid gap-4 lg:grid-cols-3">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 md:p-5">
+          <div className="mb-3">
+            <h2 className="text-lg font-semibold text-white">Nouvel asset</h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              Creez une fiche vide, puis ajoutez ses textes et ses prompts.
+            </p>
+          </div>
+          <form onSubmit={handleCreate} className="space-y-3">
+            <label className="block text-sm font-medium text-zinc-200">
+              Nom de l&apos;asset
+              <input
+                value={characterName}
+                onChange={(event) => setCharacterName(event.target.value)}
+                maxLength={120}
+                placeholder="Auguste melancolique"
+                className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-white outline-none placeholder:text-zinc-600 focus:border-accent focus:ring-2 focus:ring-accent/20"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={creating}
+              className="min-h-11 min-w-40 whitespace-nowrap rounded-xl bg-accent px-6 text-sm font-semibold text-white hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {creating ? "Creation..." : "Creer et ouvrir"}
+            </button>
+          </form>
+          {createError && (
+            <p role="alert" className="mt-3 text-sm text-red-300">
+              {createError}
+            </p>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3 md:p-4">
+          <textarea
+            aria-label="Texte libre 1"
+            value={projectNotes.notes_1}
+            onChange={(event) =>
+              setProjectNotes((notes) => ({
+                ...notes,
+                notes_1: event.target.value,
+              }))
+            }
+            maxLength={12000}
+            rows={10}
+            placeholder="Notes, intentions, contraintes..."
+            className="min-h-60 w-full resize-y rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none placeholder:text-zinc-600 focus:border-accent focus:ring-2 focus:ring-accent/20"
+          />
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3 md:p-4">
+          <textarea
+            aria-label="Texte libre 2"
+            value={projectNotes.notes_2}
+            onChange={(event) =>
+              setProjectNotes((notes) => ({
+                ...notes,
+                notes_2: event.target.value,
+              }))
+            }
+            maxLength={12000}
+            rows={10}
+            placeholder="Pistes visuelles, exclusions, versions..."
+            className="min-h-60 w-full resize-y rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none placeholder:text-zinc-600 focus:border-accent focus:ring-2 focus:ring-accent/20"
+          />
+        </div>
+
+        <div className="lg:col-span-3">
+          {notesStatus !== "idle" && (
+            <p className="text-xs text-zinc-500" aria-live="polite">
+              {notesStatus === "pending" && "Sauvegarde des textes en attente..."}
+              {notesStatus === "saving" && "Sauvegarde des textes..."}
+              {notesStatus === "saved" && "Textes sauvegardes automatiquement."}
+              {notesStatus === "error" && "Sauvegarde impossible."}
+            </p>
+          )}
+          {notesError && (
+            <p role="alert" className="mt-1 text-sm text-red-300">
+              {notesError}
+            </p>
+          )}
+        </div>
       </section>
 
       <section>
         <div className="mb-3 flex items-baseline justify-between gap-4">
-          <h2 className="text-lg font-semibold text-white">Personnages</h2>
+          <h2 className="text-lg font-semibold text-white">Assets</h2>
           <span className="text-xs tabular-nums text-zinc-500">
             {characters.length} fiche{characters.length > 1 ? "s" : ""}
           </span>
@@ -307,7 +527,7 @@ export default function ProjectDetailView({ projectId }) {
           <div className="grid min-h-56 place-items-center rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-8 text-center">
             <div>
               <p className="text-lg font-medium text-zinc-200">
-                Aucun personnage dans ce projet
+                Aucun asset dans ce projet
               </p>
               <p className="mt-2 text-sm text-zinc-500">
                 Creez la premiere fiche avec le formulaire ci-dessus.
@@ -338,7 +558,7 @@ export default function ProjectDetailView({ projectId }) {
                   <Link
                     href={`/projects/${projectId}/characters/${character.id}`}
                     aria-label={`Ouvrir la fiche de ${character.name}`}
-                    className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-white/5 px-3 text-sm font-medium text-zinc-200 hover:bg-accent/10 hover:text-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
+                    className="inline-flex min-h-11 min-w-32 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-white/5 px-4 text-sm font-medium text-zinc-200 hover:bg-accent/10 hover:text-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
                   >
                     Ouvrir
                     <ArrowIcon />
@@ -347,7 +567,7 @@ export default function ProjectDetailView({ projectId }) {
                     type="button"
                     onClick={() => beginCharacterRename(character)}
                     aria-label={`Renommer ${character.name}`}
-                    className="min-h-11 rounded-xl px-3 text-sm text-zinc-500 hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
+                    className="min-h-11 min-w-28 whitespace-nowrap rounded-xl px-4 text-sm text-zinc-500 hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
                   >
                     Renommer
                   </button>
@@ -374,14 +594,14 @@ export default function ProjectDetailView({ projectId }) {
             <div className="mt-3 flex gap-2">
               <button
                 type="submit"
-                className="min-h-11 rounded-xl bg-accent px-4 text-sm font-semibold hover:bg-accent-hover"
+                className="min-h-11 min-w-36 whitespace-nowrap rounded-xl bg-accent px-6 text-sm font-semibold hover:bg-accent-hover"
               >
                 Enregistrer
               </button>
               <button
                 type="button"
                 onClick={() => setRenameTarget(null)}
-                className="min-h-11 rounded-xl px-4 text-sm text-zinc-400 hover:bg-white/5"
+                className="min-h-11 min-w-28 whitespace-nowrap rounded-xl px-5 text-sm text-zinc-400 hover:bg-white/5"
               >
                 Annuler
               </button>

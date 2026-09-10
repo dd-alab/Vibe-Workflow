@@ -29,7 +29,7 @@ class ExportService:
     ) -> Character:
         character = self.assets.get_character(project_id, character_id)
         if character.selected_asset_id is None:
-            raise NotFoundError("Aucune image selectionnee pour ce personnage.")
+            raise NotFoundError("Aucune image selectionnee pour cet asset.")
         return self.export_asset(
             project_id,
             character_id,
@@ -71,15 +71,14 @@ class ExportService:
                 shutil.copy2(source.thumbnail_path, staged_thumbnail)
             else:
                 self.thumbnails.inspect_and_create(staged_content, staged_thumbnail)
-            relative_path = (
-                Path("characters")
-                / character.slug
-                / "exports"
-                / f"{export_id}{suffix}"
-            ).as_posix()
-            thumbnail_relative_path = (
-                Path("thumbnails") / f"{export_id}.png"
-            ).as_posix()
+            relative_path, thumbnail_relative_path = (
+                self.assets.publication_relative_paths(
+                    project_id,
+                    export_id,
+                    AssetKind.EXPORT,
+                    suffix,
+                )
+            )
             export = Asset(
                 id=export_id,
                 kind=AssetKind.EXPORT,

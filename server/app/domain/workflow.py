@@ -7,6 +7,7 @@ from .validation import ensure_no_secrets
 PORT_CHARACTER = "character"
 PORT_PROMPT = "prompt"
 PORT_IMAGE = "image"
+PORT_ARRAY = "array"
 
 
 class NodePort(BaseModel):
@@ -50,9 +51,9 @@ class NodeDefinition(BaseModel):
 NODE_DEFINITIONS: list[NodeDefinition] = [
     NodeDefinition(
         type="character_input",
-        name="Entree personnage",
+        name="Entree asset",
         category="entree",
-        description="Charge les textes, prompts et references du personnage.",
+        description="Charge les textes, prompts et references de l'asset.",
         inputs=[],
         outputs=[NodePort(name="character", type=PORT_CHARACTER)],
         parameters=[],
@@ -67,6 +68,34 @@ NODE_DEFINITIONS: list[NodeDefinition] = [
         outputs=[NodePort(name="prompt", type=PORT_PROMPT)],
         parameters=[
             NodeParameter(name="prompt_text", type="string", default="", required=True),
+        ],
+        connector_required=False,
+    ),
+    NodeDefinition(
+        type="prompt_concatenator",
+        name="Prompt Concatenator",
+        category="prompt",
+        description="Combine plusieurs prompts et un texte libre.",
+        inputs=[
+            NodePort(name="prompt_1", type=PORT_PROMPT, required=False),
+            NodePort(name="prompt_2", type=PORT_PROMPT, required=False),
+        ],
+        outputs=[NodePort(name="prompt", type=PORT_PROMPT)],
+        parameters=[
+            NodeParameter(name="additional_text", type="string", default=""),
+            NodeParameter(name="input_count", type="integer", default=2),
+        ],
+        connector_required=False,
+    ),
+    NodeDefinition(
+        type="text_iterator",
+        name="Text Iterator",
+        category="prompt",
+        description="Itere sur une liste de valeurs texte.",
+        inputs=[NodePort(name="array", type=PORT_ARRAY, required=False)],
+        outputs=[NodePort(name="text", type=PORT_PROMPT)],
+        parameters=[
+            NodeParameter(name="items", type="text_list", default=[""]),
         ],
         connector_required=False,
     ),

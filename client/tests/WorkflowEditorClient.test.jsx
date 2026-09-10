@@ -2,7 +2,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import WorkflowEditorClient from "../components/workflows/WorkflowEditorClient";
-import { listCharacters } from "../lib/api/characters";
+import { getCharacter, listCharacters } from "../lib/api/characters";
+import { listConnectors } from "../lib/api/connectors";
 import {
   createWorkflowRun,
   getJob,
@@ -23,7 +24,12 @@ vi.mock("workflow-builder", () => ({
 }));
 
 vi.mock("../lib/api/characters", () => ({
+  getCharacter: vi.fn(),
   listCharacters: vi.fn(),
+}));
+
+vi.mock("../lib/api/connectors", () => ({
+  listConnectors: vi.fn(),
 }));
 
 vi.mock("../lib/api/jobs", () => ({
@@ -65,6 +71,12 @@ describe("WorkflowEditorClient", () => {
     listCharacters.mockResolvedValue([
       { id: "character-uuid", name: "Auguste" },
     ]);
+    getCharacter.mockResolvedValue({
+      id: "character-uuid",
+      name: "Auguste",
+      short_texts: [{ id: "text-uuid", text: "Texte court" }],
+    });
+    listConnectors.mockResolvedValue([]);
     updateWorkflow.mockResolvedValue(workflow);
     createWorkflowRun.mockResolvedValue(run);
     getWorkflowRun.mockResolvedValue(run);
@@ -94,8 +106,9 @@ describe("WorkflowEditorClient", () => {
       expect(createWorkflowRun).toHaveBeenCalledWith("project-uuid", {
         workflow_id: "workflow-uuid",
         character_id: "character-uuid",
+        background: true,
       });
-      expect(screen.getByText("mock-generation")).toBeInTheDocument();
+      expect(getJob).toHaveBeenCalledWith("job-uuid");
     });
   });
 });

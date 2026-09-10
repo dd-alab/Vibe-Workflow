@@ -108,3 +108,14 @@
   border: none !important;
   opacity: 0 !important;
 }
+
+.workflow-number-input::-webkit-outer-spin-button,
+.workflow-number-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.workflow-number-input {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}

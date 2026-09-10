@@ -19,9 +19,9 @@ def _create_character_in_process(root: str, project_id: str, index: int) -> None
 
 def test_create_project_builds_readable_directory_tree(tmp_path) -> None:
     project = ProjectRepository(tmp_path).create("Circus Portraits")
-    project_directory = tmp_path / "circus-portraits"
+    project_directory = tmp_path / "circus_portraits"
 
-    assert project.slug == "circus-portraits"
+    assert project.slug == "circus_portraits"
     assert (project_directory / "project.json").is_file()
     assert {
         "characters",

@@ -35,9 +35,42 @@ function nodeTypeOf(id, nodes) {
   return node ? node.type : null;
 }
 
+function connectorKindForNode(nodeType) {
+  if (nodeType === "image_generation") {
+    return "generation";
+  }
+  if (nodeType === "upscale") {
+    return "upscale";
+  }
+  return null;
+}
+
+function nodeVisualKind(nodeType) {
+  if (nodeType === "prompt_variant") {
+    return "TEXT";
+  }
+  if (nodeType === "prompt_concatenator" || nodeType === "text_iterator") {
+    return "TEXT";
+  }
+  if (["image_generation", "result_set", "selection", "upscale", "export"].includes(nodeType)) {
+    return "IMAGE";
+  }
+  return "INPUT";
+}
+
+function edgeColor(edge) {
+  if (edge.sourceHandle === "image" || edge.targetHandle === "image") {
+    return "#1fbf75";
+  }
+  return "#2563eb";
+}
+
 export default function WorkflowBuilder({
   workflow,
   nodeDefinitions = defaultNodeDefinitions,
+  connectorOptions = [],
+  nodeOutputs = {},
+  characterPreview = null,
   onChange,
   onSave,
   onRun,
@@ -127,6 +160,24 @@ export default function WorkflowBuilder({
     [nodes, edges, emit],
   );
 
+  const handleConnectorChange = useCallback(
+    (nodeId, connectorId) => {
+      const nextNodes = nodes.map((node) =>
+        node.id === nodeId
+          ? {
+              ...node,
+              data: {
+                ...node.data,
+                connectorId: connectorId || null,
+              },
+            }
+          : node,
+      );
+      emit(nextNodes, edges);
+    },
+    [nodes, edges, emit],
+  );
+
   const handleDeleteNode = useCallback(
     (nodeId) => {
       const nextNodes = nodes.filter((node) => node.id !== nodeId);
@@ -134,6 +185,31 @@ export default function WorkflowBuilder({
         (edge) => edge.source !== nodeId && edge.target !== nodeId,
       );
       emit(nextNodes, nextEdges);
+    },
+    [nodes, edges, emit],
+  );
+
+  const handleDuplicateNode = useCallback(
+    (nodeId) => {
+      const source = nodes.find((node) => node.id === nodeId);
+      if (!source) {
+        return;
+      }
+      const existingIds = new Set(nodes.map((node) => node.id));
+      const id = generateNodeId(source.type, existingIds);
+      const duplicate = {
+        ...source,
+        id,
+        position: {
+          x: (source.position?.x || 0) + 32,
+          y: (source.position?.y || 0) + 32,
+        },
+        data: {
+          ...source.data,
+          parameters: { ...(source.data?.parameters || {}) },
+        },
+      };
+      emit([...nodes, duplicate], edges);
     },
     [nodes, edges, emit],
   );
@@ -205,17 +281,58 @@ export default function WorkflowBuilder({
   );
 
   const injectedNodes = useMemo(
+    () => {
+      const counts = {};
+      return nodes.map((node) => {
+        const visualKind = nodeVisualKind(node.type);
+        counts[visualKind] = (counts[visualKind] || 0) + 1;
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            visualLabel: `${visualKind} ${counts[visualKind]}`,
+            preview: nodeOutputs[node.id] || null,
+            characterPreview:
+              node.type === "character_input" || node.type === "prompt_variant"
+                ? characterPreview
+                : null,
+            connectorOptions: connectorOptions.filter(
+              (connector) => connector.kind === connectorKindForNode(node.type),
+            ),
+            onChange: (parameterName, value) =>
+              handleParameterChange(node.id, parameterName, value),
+            onConnectorChange: (connectorId) =>
+            handleConnectorChange(node.id, connectorId),
+            onDuplicate: () => handleDuplicateNode(node.id),
+            onDelete: () => handleDeleteNode(node.id),
+          },
+        };
+      });
+    },
+    [
+      nodes,
+      connectorOptions,
+      nodeOutputs,
+      characterPreview,
+      handleParameterChange,
+      handleConnectorChange,
+      handleDuplicateNode,
+      handleDeleteNode,
+    ],
+  );
+
+  const styledEdges = useMemo(
     () =>
-      nodes.map((node) => ({
-        ...node,
-        data: {
-          ...node.data,
-          onChange: (parameterName, value) =>
-            handleParameterChange(node.id, parameterName, value),
-          onDelete: () => handleDeleteNode(node.id),
-        },
-      })),
-    [nodes, handleParameterChange, handleDeleteNode],
+      edges.map((edge) => {
+        const color = edgeColor(edge);
+        return {
+          ...edge,
+          type: "bezier",
+          animated: false,
+          style: { stroke: color, strokeWidth: 2 },
+        };
+      }),
+    [edges],
   );
 
   const errors = useMemo(
@@ -295,7 +412,7 @@ export default function WorkflowBuilder({
         <div className="relative flex-1">
           <WorkflowCanvas
             nodes={injectedNodes}
-            edges={edges}
+            edges={styledEdges}
             onNodesChange={handleNodesChange}
             onEdgesChange={handleEdgesChange}
             onConnect={handleConnect}

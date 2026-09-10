@@ -26,10 +26,22 @@ class ProjectCreate(BaseModel):
 
 
 class ProjectPatch(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    model_config = ConfigDict(extra="forbid")
 
     expected_revision: int = Field(ge=0)
-    name: str = Field(min_length=1, max_length=120)
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    notes_1: str | None = Field(default=None, max_length=12000)
+    notes_2: str | None = Field(default=None, max_length=12000)
+
+    @field_validator("name")
+    @classmethod
+    def name_has_content(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("name must not be empty")
+        return stripped
 
 
 ProjectServiceDependency = Annotated[ProjectService, Depends(get_project_service)]
@@ -63,4 +75,11 @@ def update_project(
         project_id,
         expected_revision=payload.expected_revision,
         name=payload.name,
+        notes_1=payload.notes_1,
+        notes_2=payload.notes_2,
     )
+
+
+@router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_project(project_id: UUID, service: ProjectServiceDependency) -> None:
+    service.delete_project(project_id)

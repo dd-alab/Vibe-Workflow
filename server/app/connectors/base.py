@@ -58,6 +58,9 @@ class Connector(ABC):
     def estimate_cost(self, parameters: dict[str, Any]) -> float | None:
         return None
 
+    def check(self) -> dict[str, Any]:
+        return {"available": True}
+
     @abstractmethod
     def submit(
         self,

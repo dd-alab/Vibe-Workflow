@@ -18,17 +18,23 @@ function NavIcon({ path }) {
   );
 }
 
-const futureItems = [
+const projectItems = [
   {
     label: "Galerie",
+    suffix: "gallery",
     path: "M3 16.5l5-5 4 4 3-3 6 6M5 5h14v14H5z",
   },
   {
     label: "Workflows",
+    suffix: "workflows",
     path: "M6 4v5m0 6v5m12-16v5m0 6v5M6 9h12v6H6z",
   },
+];
+
+const globalItems = [
   {
     label: "Connecteurs",
+    href: "/connectors",
     path: "M8 12h8m-6-4v8m4-8v8M5 5h14v14H5z",
   },
 ];
@@ -51,7 +57,7 @@ export default function AppShell({ children }) {
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-accent shadow-[0_0_24px_rgba(97,92,80,0.3)]">
               <svg
                 aria-hidden="true"
-                className="h-5 w-5"
+                className="h-6 w-6"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -60,7 +66,12 @@ export default function AppShell({ children }) {
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  d="M7 4h10l3 5-8 11L4 9l3-5zm-3 5h16M9 4l3 16 3-16"
+                  d="M12 3v3m0-3h4m-4 3L4 11h16l-8-5zM5 11v9m14-9v9M3 20h18"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M8 20v-5a4 4 0 0 1 8 0v5M5 11c1.4 1.6 3.2 1.6 4.6 0 1.4 1.6 3.4 1.6 4.8 0 1.4 1.6 3.2 1.6 4.6 0M8 13h8"
                 />
               </svg>
             </span>
@@ -84,16 +95,46 @@ export default function AppShell({ children }) {
               <NavIcon path="M4 7.5L12 3l8 4.5V20H4V7.5zm5 12v-6h6v6" />
               Projet
             </Link>
-            {futureItems.map((item) => (
-              <span
+            {projectItems.map((item) => {
+              const href = projectId
+                ? `/projects/${projectId}/${item.suffix}`
+                : null;
+              const active = href && pathname === href;
+              if (!href) {
+                return (
+                  <span
+                    key={item.label}
+                    aria-disabled="true"
+                    title="Ouvrez un projet pour acceder a cette section"
+                    className="flex min-h-11 shrink-0 cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-zinc-600"
+                  >
+                    <NavIcon path={item.path} />
+                    {item.label}
+                  </span>
+                );
+              }
+              return (
+                <Link
+                  key={item.label}
+                  href={href}
+                  aria-current={active ? "page" : undefined}
+                  className="flex min-h-11 shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-zinc-400 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
+                >
+                  <NavIcon path={item.path} />
+                  {item.label}
+                </Link>
+              );
+            })}
+            {globalItems.map((item) => (
+              <Link
                 key={item.label}
-                aria-disabled="true"
-                title="Disponible dans un prochain lot"
-                className="flex min-h-11 shrink-0 cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-zinc-600"
+                href={item.href}
+                aria-current={pathname === item.href ? "page" : undefined}
+                className="flex min-h-11 shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-zinc-400 transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
               >
                 <NavIcon path={item.path} />
                 {item.label}
-              </span>
+              </Link>
             ))}
           </nav>
 

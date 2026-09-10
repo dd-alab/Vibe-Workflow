@@ -27,6 +27,10 @@ def test_validate_slug_rejects_unsafe_values(slug) -> None:
         validate_slug(slug)
 
 
+def test_validate_slug_accepts_underscore_values() -> None:
+    assert validate_slug("circus_portraits") == "circus_portraits"
+
+
 @pytest.mark.parametrize(
     "relative_path",
     [

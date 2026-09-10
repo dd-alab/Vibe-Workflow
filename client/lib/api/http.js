@@ -20,6 +20,14 @@ function detailMessage(detail) {
   return "La requete locale a echoue.";
 }
 
+function responseErrorMessage(response, payload) {
+  const detail = detailMessage(payload?.detail);
+  if (detail !== "La requete locale a echoue.") {
+    return detail;
+  }
+  return `La requete locale a echoue (HTTP ${response.status}).`;
+}
+
 function parseJson(value) {
   if (!value) {
     return null;
@@ -126,7 +134,7 @@ export async function request(path, options = {}) {
 
   if (!response.ok) {
     throw new ApiError(
-      detailMessage(payload?.detail),
+      responseErrorMessage(response, payload),
       response.status,
       payload?.detail ?? null,
     );

@@ -45,7 +45,7 @@ class CharacterService:
             return self.characters.create(project_id, name=name, slug=slug)
         except ValueError as error:
             raise ServiceValidationError(
-                "Le nom ne permet pas de creer un dossier personnage valide."
+                "Le nom ne permet pas de creer un dossier asset valide."
             ) from error
 
     def get_character(self, project_id: UUID, character_id: UUID) -> Character:

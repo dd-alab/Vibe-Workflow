@@ -162,10 +162,12 @@ def test_workflow_node_definitions_endpoint(client):
 
     assert response.status_code == 200
     definitions = response.json()
-    assert len(definitions) == 7
+    assert len(definitions) == 9
     assert {definition["type"] for definition in definitions} == {
         "character_input",
         "prompt_variant",
+        "prompt_concatenator",
+        "text_iterator",
         "image_generation",
         "result_set",
         "selection",

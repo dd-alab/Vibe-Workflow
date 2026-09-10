@@ -121,7 +121,7 @@ export default function ResultGrid({
           return (
             <article
               key={asset.id}
-              className={`overflow-hidden rounded-2xl border bg-black/25 ${
+              className={`rounded-2xl border bg-black/25 ${
                 selected ? "border-accent/60" : "border-white/10"
               }`}
             >
@@ -143,7 +143,7 @@ export default function ResultGrid({
                     alt={`${kindLabel(asset.kind)} ${index + 1} pour ${character.name}`}
                     sizes="(min-width: 1280px) 18rem, (min-width: 640px) 50vw, 100vw"
                     onError={() => markThumbnailMissing(asset.id)}
-                    className="object-contain"
+                    className="rounded-none object-contain"
                   />
                 </a>
               )}
@@ -185,7 +185,7 @@ export default function ResultGrid({
                     type="button"
                     disabled={controlsDisabled || selected}
                     onClick={() => select(asset)}
-                    className="min-h-10 flex-1 rounded-lg bg-accent px-3 text-xs font-semibold text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+                    className="min-h-10 min-w-32 flex-1 whitespace-nowrap rounded-lg bg-accent px-4 text-xs font-semibold text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {busy ? "Action..." : "Selectionner"}
                   </button>
@@ -193,7 +193,7 @@ export default function ResultGrid({
                     type="button"
                     disabled={controlsDisabled}
                     onClick={() => exportResult(asset)}
-                    className="min-h-10 rounded-lg border border-white/10 px-3 text-xs text-zinc-300 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="min-h-10 min-w-24 whitespace-nowrap rounded-lg border border-white/10 px-4 text-xs text-zinc-300 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Exporter
                   </button>

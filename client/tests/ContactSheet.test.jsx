@@ -3,9 +3,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import ContactSheet from "../components/gallery/ContactSheet";
 import { getGallery } from "../lib/api/gallery";
+import { getProject } from "../lib/api/projects";
 
 vi.mock("../lib/api/gallery", () => ({
   getGallery: vi.fn(),
+}));
+
+vi.mock("../lib/api/projects", () => ({
+  getProject: vi.fn(),
 }));
 
 afterEach(() => {
@@ -15,6 +20,10 @@ afterEach(() => {
 
 describe("ContactSheet", () => {
   it("renders selected thumbnails and placeholder cards", async () => {
+    getProject.mockResolvedValue({
+      id: "project-uuid",
+      name: "01 Niepce et la premiere image",
+    });
     getGallery.mockResolvedValue([
       {
         character_id: "with-selection",
@@ -37,6 +46,7 @@ describe("ContactSheet", () => {
     render(<ContactSheet projectId="project-uuid" />);
 
     expect(await screen.findByText("Auguste")).toBeInTheDocument();
+    expect(screen.getByText("01 Niepce et la premiere image")).toBeInTheDocument();
     expect(screen.getByText("Ecuyere")).toBeInTheDocument();
     expect(screen.getByText("Aucune selection")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Auguste/ })).toHaveAttribute(

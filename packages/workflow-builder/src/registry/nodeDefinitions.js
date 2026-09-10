@@ -1,13 +1,14 @@
 export const PORT_CHARACTER = "character";
 export const PORT_PROMPT = "prompt";
 export const PORT_IMAGE = "image";
+export const PORT_ARRAY = "array";
 
 export const defaultNodeDefinitions = [
   {
     type: "character_input",
-    name: "Entree personnage",
+    name: "Entree asset",
     category: "entree",
-    description: "Charge les textes, prompts et references du personnage.",
+    description: "Charge les textes, prompts et references de l'asset.",
     inputs: [],
     outputs: [{ name: "character", type: PORT_CHARACTER }],
     parameters: [],
@@ -23,6 +24,32 @@ export const defaultNodeDefinitions = [
     parameters: [
       { name: "prompt_text", type: "string", default: "", required: true },
     ],
+    connectorRequired: false,
+  },
+  {
+    type: "prompt_concatenator",
+    name: "Prompt Concatenator",
+    category: "prompt",
+    description: "Connect multiple prompts to one output prompt.",
+    inputs: [
+      { name: "prompt_1", type: PORT_PROMPT, required: false },
+      { name: "prompt_2", type: PORT_PROMPT, required: false },
+    ],
+    outputs: [{ name: "prompt", type: PORT_PROMPT }],
+    parameters: [
+      { name: "additional_text", type: "string", default: "" },
+      { name: "input_count", type: "integer", default: 2, hidden: true },
+    ],
+    connectorRequired: false,
+  },
+  {
+    type: "text_iterator",
+    name: "Text Iterator",
+    category: "prompt",
+    description: "Iterate over a list of text values.",
+    inputs: [{ name: "array", type: PORT_ARRAY, required: false }],
+    outputs: [{ name: "text", type: PORT_PROMPT }],
+    parameters: [{ name: "items", type: "text_list", default: [""] }],
     connectorRequired: false,
   },
   {

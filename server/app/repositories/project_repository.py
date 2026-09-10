@@ -118,6 +118,11 @@ class ProjectRepository:
             self._write(project_directory, updated)
             return updated
 
+    def delete(self, project_id: UUID | str) -> None:
+        project_directory = self.path_for(project_id)
+        with project_lock(project_directory):
+            shutil.rmtree(project_directory)
+
     @staticmethod
     def metadata_path(project_directory: Path) -> Path:
         return project_directory / "project.json"

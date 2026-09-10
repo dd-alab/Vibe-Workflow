@@ -12,7 +12,7 @@ SECRET_KEYS = {
     "secret",
     "token",
 }
-SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:[-_][a-z0-9]+)*$")
 WINDOWS_RESERVED_NAMES = {
     "aux",
     "con",
@@ -31,7 +31,9 @@ BEARER_PATTERN = re.compile(r"(?i)\bbearer\s+[^\s,;]+")
 
 def validate_slug(value: str) -> str:
     if len(value) > 80 or not SLUG_PATTERN.fullmatch(value):
-        raise ValueError("slug must contain lowercase letters, numbers, and hyphens")
+        raise ValueError(
+            "slug must contain lowercase letters, numbers, hyphens, and underscores"
+        )
     if value in WINDOWS_RESERVED_NAMES:
         raise ValueError("slug is reserved on Windows")
     return value

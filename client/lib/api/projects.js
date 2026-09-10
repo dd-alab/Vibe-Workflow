@@ -18,3 +18,9 @@ export function updateProject(projectId, payload) {
     body: payload,
   });
 }
+
+export function deleteProject(projectId) {
+  return request(`/api/projects/${encodeURIComponent(projectId)}`, {
+    method: "DELETE",
+  });
+}

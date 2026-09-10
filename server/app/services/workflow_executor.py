@@ -97,7 +97,11 @@ class WorkflowExecutor:
         if node_type == "character_input":
             return {"character": str(ctx.character.id) if ctx.character else None}
         if node_type == "prompt_variant":
-            return {"prompt": ctx.node.parameters.get("prompt_text", "")}
+            return {"prompt": self._prompt_text(ctx)}
+        if node_type == "prompt_concatenator":
+            return {"prompt": self._concatenate_prompts(ctx, inputs)}
+        if node_type == "text_iterator":
+            return {"text": self._text_iterator_value(ctx, inputs)}
         if node_type == "image_generation":
             return self._run_generation(project_id, ctx, inputs)
         if node_type == "result_set":
@@ -111,6 +115,49 @@ class WorkflowExecutor:
         if node_type == "export":
             return self._publish(project_id, ctx, inputs, AssetKind.EXPORT)
         return {}
+
+    @staticmethod
+    def _prompt_text(ctx: NodeContext) -> str:
+        explicit = ctx.node.parameters.get("prompt_text", "")
+        if explicit:
+            return explicit
+        character = ctx.current_character or ctx.character
+        if character is None or character.active_prompt_version_id is None:
+            return ""
+        active = next(
+            (
+                prompt
+                for prompt in character.prompt_versions
+                if prompt.id == character.active_prompt_version_id
+            ),
+            None,
+        )
+        return active.text if active is not None else ""
+
+    @staticmethod
+    def _concatenate_prompts(ctx: NodeContext, inputs: dict[str, Any]) -> str:
+        prompt_items = []
+        for key, value in sorted(inputs.items()):
+            if not key.startswith("prompt_") or not value:
+                continue
+            prompt_items.append(str(value).strip())
+        additional = str(ctx.node.parameters.get("additional_text") or "").strip()
+        if additional:
+            prompt_items.append(additional)
+        return "\n\n".join(item for item in prompt_items if item)
+
+    @staticmethod
+    def _text_iterator_value(ctx: NodeContext, inputs: dict[str, Any]) -> str:
+        source = inputs.get("array") or ctx.node.parameters.get("items") or []
+        if isinstance(source, str):
+            source = [source]
+        if not isinstance(source, list):
+            return ""
+        for item in source:
+            text = str(item).strip()
+            if text:
+                return text
+        return ""
 
     def _run_generation(
         self, project_id: UUID, ctx: NodeContext, inputs: dict[str, Any]
@@ -129,6 +176,19 @@ class WorkflowExecutor:
         )
         ctx.job_ids.append(job.id)
         result = self.jobs.run_job(project_id, job)
+        if not self._has_downstream_node_type(ctx.workflow, ctx.node.id, "result_set"):
+            asset = self._publish_image(
+                project_id,
+                ctx,
+                result.output_path,
+                AssetKind.GENERATION,
+            )
+            self.jobs.add_output_asset(project_id, job.id, asset.id)
+            ctx.current_character = self.assets.get_character(
+                project_id,
+                ctx.current_character.id,
+            )
+            return {"image": str(ctx.project_directory / asset.relative_path)}
         return {"image": str(result.output_path)}
 
     def _publish(
@@ -143,6 +203,7 @@ class WorkflowExecutor:
         if ctx.current_character is None:
             raise ValueError("publishing an asset requires a character context")
         character = ctx.current_character
+        job_id: UUID | None = None
         with self.assets.staging_directory(project_id) as staging_directory:
             staged_content = staging_directory / "content.png"
             staged_thumbnail = staging_directory / "thumbnail.png"
@@ -159,6 +220,7 @@ class WorkflowExecutor:
                     inputs=job_inputs,
                 )
                 ctx.job_ids.append(job.id)
+                job_id = job.id
                 result = self.jobs.run_job(project_id, job)
                 shutil.move(result.output_path, staged_content)
             else:
@@ -166,18 +228,25 @@ class WorkflowExecutor:
                 if not source_text:
                     raise ValueError("publishing requires an input image")
                 shutil.copy2(Path(source_text), staged_content)
+                job_id = self._job_id_for_output(
+                    project_id,
+                    ctx.job_ids,
+                    Path(source_text),
+                )
 
             image_info = self.thumbnails.inspect_and_create(
                 staged_content,
                 staged_thumbnail,
             )
             asset_id = uuid4()
-            directory = self._kind_directory(kind)
-            relative_path = (
-                f"characters/{character.slug}/{directory}/{asset_id}"
-                f"{image_info.canonical_extension}"
+            relative_path, thumbnail_relative_path = (
+                self.assets.publication_relative_paths(
+                    project_id,
+                    asset_id,
+                    kind,
+                    image_info.canonical_extension,
+                )
             )
-            thumbnail_relative_path = f"thumbnails/{asset_id}.png"
             asset = Asset(
                 id=asset_id,
                 kind=kind,
@@ -195,8 +264,89 @@ class WorkflowExecutor:
                 staged_content_path=staged_content,
                 staged_thumbnail_path=staged_thumbnail,
             )
+            if job_id is not None:
+                self.jobs.add_output_asset(project_id, job_id, asset.id)
         ctx.current_character = updated
         return {"image": str(ctx.project_directory / asset.relative_path)}
+
+    def _publish_image(
+        self,
+        project_id: UUID,
+        ctx: NodeContext,
+        source_path: Path,
+        kind: AssetKind,
+    ) -> Asset:
+        if ctx.current_character is None:
+            raise ValueError("publishing an asset requires a character context")
+        character = ctx.current_character
+        with self.assets.staging_directory(project_id) as staging_directory:
+            staged_content = staging_directory / "content.png"
+            staged_thumbnail = staging_directory / "thumbnail.png"
+            shutil.copy2(source_path, staged_content)
+            image_info = self.thumbnails.inspect_and_create(
+                staged_content,
+                staged_thumbnail,
+            )
+            asset_id = uuid4()
+            relative_path, thumbnail_relative_path = (
+                self.assets.publication_relative_paths(
+                    project_id,
+                    asset_id,
+                    kind,
+                    image_info.canonical_extension,
+                )
+            )
+            asset = Asset(
+                id=asset_id,
+                kind=kind,
+                relative_path=relative_path,
+                thumbnail_relative_path=thumbnail_relative_path,
+                media_type=image_info.media_type,
+                width=image_info.width,
+                height=image_info.height,
+            )
+            self.assets.register_asset(
+                project_id,
+                character.id,
+                expected_revision=character.revision,
+                asset=asset,
+                staged_content_path=staged_content,
+                staged_thumbnail_path=staged_thumbnail,
+            )
+            return asset
+
+    def _job_id_for_output(
+        self,
+        project_id: UUID,
+        job_ids: list[UUID],
+        source_path: Path,
+    ) -> UUID | None:
+        try:
+            source_relative = source_path.relative_to(
+                self.assets.projects.path_for(project_id)
+            ).as_posix()
+        except ValueError:
+            return None
+        for job_id in reversed(job_ids):
+            job = self.jobs.get_job(project_id, job_id)
+            if source_relative in job.output_paths:
+                return job.id
+        return None
+
+    @staticmethod
+    def _has_downstream_node_type(
+        workflow: Workflow,
+        source_node_id: str,
+        node_type: str,
+    ) -> bool:
+        target_ids = {
+            edge.target_node_id
+            for edge in workflow.edges
+            if edge.source_node_id == source_node_id
+        }
+        return any(
+            node.id in target_ids and node.type == node_type for node in workflow.nodes
+        )
 
     @staticmethod
     def _run_selection(ctx: NodeContext) -> dict[str, Any]:
@@ -214,14 +364,6 @@ class WorkflowExecutor:
         if selected is None:
             return {"image": None}
         return {"image": str(ctx.project_directory / selected.relative_path)}
-
-    @staticmethod
-    def _kind_directory(kind: AssetKind) -> str:
-        return {
-            AssetKind.GENERATION: "generations",
-            AssetKind.UPSCALE: "upscales",
-            AssetKind.EXPORT: "exports",
-        }[kind]
 
     @staticmethod
     def _resolve_inputs(

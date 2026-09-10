@@ -11,7 +11,7 @@ vi.mock("next/navigation", () => ({
 afterEach(cleanup);
 
 describe("AppShell", () => {
-  it("links the active project by UUID and disables future sections", () => {
+  it("links active project sections by UUID and exposes connectors", () => {
     render(<AppShell>Contenu</AppShell>);
 
     expect(screen.getByRole("link", { name: "Projet" })).toHaveAttribute(
@@ -22,14 +22,17 @@ describe("AppShell", () => {
       "aria-current",
       "page",
     );
-    expect(screen.getByText("Galerie")).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByText("Workflows")).toHaveAttribute(
-      "aria-disabled",
-      "true",
+    expect(screen.getByRole("link", { name: "Galerie" })).toHaveAttribute(
+      "href",
+      "/projects/project-uuid/gallery",
     );
-    expect(screen.getByText("Connecteurs")).toHaveAttribute(
-      "aria-disabled",
-      "true",
+    expect(screen.getByRole("link", { name: "Workflows" })).toHaveAttribute(
+      "href",
+      "/projects/project-uuid/workflows",
+    );
+    expect(screen.getByRole("link", { name: "Connecteurs" })).toHaveAttribute(
+      "href",
+      "/connectors",
     );
   });
 });

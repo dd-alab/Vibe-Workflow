@@ -100,6 +100,8 @@ def test_connectors_endpoints_are_available(client):
     assert response.status_code == 200
     connectors = response.json()
     assert {item["id"] for item in connectors} == {
+        "muapi-generation",
+        "muapi-upscale",
         "mock-generation",
         "mock-upscale",
     }

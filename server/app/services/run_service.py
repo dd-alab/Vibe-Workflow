@@ -33,6 +33,24 @@ class RunService:
         run = self.executor.execute(project_id, workflow_id, run)
         return self.runs.save(project_id, run)
 
+    def create_queued_run(
+        self,
+        project_id: UUID,
+        workflow_id: UUID,
+        character_id: UUID,
+    ) -> WorkflowRun:
+        run = WorkflowRun(
+            project_id=project_id,
+            workflow_id=workflow_id,
+            character_id=character_id,
+        )
+        return self.runs.create(project_id, run)
+
+    def execute_run(self, project_id: UUID, run_id: UUID) -> WorkflowRun:
+        run = self.runs.get(project_id, run_id)
+        run = self.executor.execute(project_id, run.workflow_id, run)
+        return self.runs.save(project_id, run)
+
     def get_run(self, project_id: UUID, run_id: UUID) -> WorkflowRun:
         return self.runs.get(project_id, run_id)
 

@@ -9,6 +9,7 @@ import {
   deleteWorkflow,
   listWorkflows,
 } from "../../lib/api/workflows";
+import { getProject } from "../../lib/api/projects";
 
 function formatDate(value) {
   return new Intl.DateTimeFormat("fr-FR", {
@@ -35,6 +36,7 @@ function ArrowIcon() {
 
 export default function WorkflowsView({ projectId }) {
   const router = useRouter();
+  const [project, setProject] = useState(null);
   const [workflows, setWorkflows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -47,9 +49,10 @@ export default function WorkflowsView({ projectId }) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    listWorkflows(projectId)
-      .then((items) => {
+    Promise.all([getProject(projectId), listWorkflows(projectId)])
+      .then(([loadedProject, items]) => {
         if (!cancelled) {
+          setProject(loadedProject);
           setWorkflows(items);
           setLoadError("");
         }
@@ -127,7 +130,7 @@ export default function WorkflowsView({ projectId }) {
         <button
           type="button"
           onClick={retry}
-          className="mt-4 min-h-11 rounded-xl border border-white/10 px-4 text-sm font-medium hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
+          className="mt-4 min-h-11 min-w-32 whitespace-nowrap rounded-xl border border-white/10 px-5 text-sm font-medium hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
         >
           Reessayer
         </button>
@@ -138,12 +141,17 @@ export default function WorkflowsView({ projectId }) {
   return (
     <div className="space-y-5">
       <header>
-        <Link
-          href={`/projects/${projectId}`}
-          className="inline-flex min-h-11 items-center text-sm text-zinc-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
-        >
-          Retour au projet
-        </Link>
+        <div className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+          <span className="max-w-xl truncate font-medium text-zinc-200">
+            {project?.name}
+          </span>
+          <Link
+            href={`/projects/${projectId}`}
+            className="text-zinc-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
+          >
+            Retour au projet
+          </Link>
+        </div>
         <div className="mt-2">
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-accent-soft">
             Workflows
@@ -175,7 +183,7 @@ export default function WorkflowsView({ projectId }) {
           <button
             type="submit"
             disabled={creating}
-            className="min-h-11 rounded-xl bg-accent px-5 text-sm font-semibold text-white hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
+            className="min-h-11 min-w-40 whitespace-nowrap rounded-xl bg-accent px-6 text-sm font-semibold text-white hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
           >
             {creating ? "Creation..." : "Creer et ouvrir"}
           </button>
@@ -225,7 +233,7 @@ export default function WorkflowsView({ projectId }) {
                   <Link
                     href={`/projects/${projectId}/workflows/${workflow.id}`}
                     aria-label={`Ouvrir le workflow ${workflow.name}`}
-                    className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-white/5 px-3 text-sm font-medium text-zinc-200 hover:bg-accent/10 hover:text-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
+                    className="inline-flex min-h-11 min-w-32 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-white/5 px-4 text-sm font-medium text-zinc-200 hover:bg-accent/10 hover:text-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
                   >
                     Ouvrir
                     <ArrowIcon />
@@ -235,7 +243,7 @@ export default function WorkflowsView({ projectId }) {
                     disabled={deletingId === workflow.id}
                     onClick={() => handleDelete(workflow)}
                     aria-label={`Supprimer ${workflow.name}`}
-                    className="min-h-11 rounded-xl px-3 text-sm text-zinc-500 hover:bg-white/5 hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
+                    className="min-h-11 min-w-28 whitespace-nowrap rounded-xl px-4 text-sm text-zinc-500 hover:bg-white/5 hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Supprimer
                   </button>

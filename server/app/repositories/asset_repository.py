@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import tempfile
 from collections.abc import Iterator
@@ -50,6 +51,74 @@ class AssetRepository:
         finally:
             if temporary_directory.exists():
                 shutil.rmtree(temporary_directory)
+
+    def publication_relative_paths(
+        self,
+        project_id: UUID | str,
+        asset_id: UUID | str,
+        kind: AssetKind,
+        extension: str,
+    ) -> tuple[str, str]:
+        project_directory = self.projects.path_for(project_id)
+        project = self.projects._load(project_directory)
+        return self._publication_relative_paths_for_project(
+            project.name, asset_id, kind, extension
+        )
+
+    def migrate_publishable_assets(self, project_id: UUID | str) -> list[Asset]:
+        project_directory = self.projects.path_for(project_id)
+        migrated: list[Asset] = []
+        with project_lock(project_directory):
+            project = self.projects._load(project_directory)
+            for reference in project.characters:
+                character_directory = resolve_within(
+                    project_directory, Path("characters") / reference.slug
+                )
+                character = self.characters._load_for_reference(
+                    project, reference, character_directory
+                )
+                next_assets: list[Asset] = []
+                changed = False
+                for asset in character.assets:
+                    if asset.kind == AssetKind.REFERENCE:
+                        next_assets.append(asset)
+                        continue
+                    suffix = PurePosixPath(asset.relative_path).suffix or ".png"
+                    relative_path, thumbnail_relative_path = (
+                        self._publication_relative_paths_for_project(
+                            project.name, asset.id, asset.kind, suffix
+                        )
+                    )
+                    next_asset = asset.model_copy(
+                        update={
+                            "relative_path": relative_path,
+                            "thumbnail_relative_path": thumbnail_relative_path,
+                        }
+                    )
+                    self._move_if_needed(
+                        project_directory,
+                        asset.relative_path,
+                        next_asset.relative_path,
+                    )
+                    if asset.thumbnail_relative_path is not None:
+                        self._move_if_needed(
+                            project_directory,
+                            asset.thumbnail_relative_path,
+                            next_asset.thumbnail_relative_path,
+                        )
+                    if next_asset != asset:
+                        migrated.append(next_asset)
+                        changed = True
+                    next_assets.append(next_asset)
+                if changed:
+                    data = character.model_dump()
+                    data["assets"] = next_assets
+                    data["revision"] = character.revision + 1
+                    data["updated_at"] = utc_now()
+                    self.characters._write(
+                        character_directory, Character.model_validate(data)
+                    )
+        return migrated
 
     def add_reference(
         self,
@@ -373,12 +442,15 @@ class AssetRepository:
         }.get(asset.kind)
         if kind_directory is None:
             raise CorruptMetadataError("asset kind is not publishable")
+        project = self.projects._load(project_directory)
+        project_media_directory = self._media_directory_name(project.name)
         content_relative = PurePosixPath(asset.relative_path)
-        expected_parent = PurePosixPath(
-            "characters", character.slug, kind_directory
-        )
+        expected_parents = {
+            PurePosixPath(project_media_directory, kind_directory),
+            PurePosixPath("characters", character.slug, kind_directory),
+        }
         if (
-            content_relative.parent != expected_parent
+            content_relative.parent not in expected_parents
             or content_relative.stem != str(asset.id)
             or content_relative.suffix not in {".png", ".jpg", ".webp"}
         ):
@@ -389,12 +461,16 @@ class AssetRepository:
             else None
         )
         if thumbnail_relative is not None and (
-            thumbnail_relative.parent != PurePosixPath("thumbnails")
+            thumbnail_relative.parent
+            not in {
+                PurePosixPath(project_media_directory, "thumbnails"),
+                PurePosixPath("thumbnails"),
+            }
             or thumbnail_relative.name != f"{asset.id}.png"
         ):
             raise CorruptMetadataError("thumbnail path does not match its asset")
 
-        content_directory = self._safe_directory(
+        content_directory = self._ensure_safe_directory(
             project_directory, content_relative.parent
         )
         content_path = self._safe_file_path(
@@ -402,13 +478,66 @@ class AssetRepository:
         )
         thumbnail_path = None
         if thumbnail_relative is not None:
-            thumbnail_directory = self._safe_directory(
+            thumbnail_directory = self._ensure_safe_directory(
                 project_directory, thumbnail_relative.parent
             )
             thumbnail_path = self._safe_file_path(
                 thumbnail_directory, thumbnail_relative.name
             )
         return content_path, thumbnail_path
+
+    @staticmethod
+    def _kind_directory(kind: AssetKind) -> str:
+        value = {
+            AssetKind.GENERATION: "generations",
+            AssetKind.UPSCALE: "upscales",
+            AssetKind.EXPORT: "exports",
+        }.get(kind)
+        if value is None:
+            raise CorruptMetadataError("asset kind is not publishable")
+        return value
+
+    @classmethod
+    def _publication_relative_paths_for_project(
+        cls,
+        project_name: str,
+        asset_id: UUID | str,
+        kind: AssetKind,
+        extension: str,
+    ) -> tuple[str, str]:
+        kind_directory = cls._kind_directory(kind)
+        base = cls._media_directory_name(project_name)
+        return (
+            PurePosixPath(base, kind_directory, f"{asset_id}{extension}").as_posix(),
+            PurePosixPath(base, "thumbnails", f"{asset_id}.png").as_posix(),
+        )
+
+    @staticmethod
+    def _media_directory_name(project_name: str) -> str:
+        name = re.sub(r'[<>:"/\\|?*\x00-\x1f]+', "_", project_name.strip())
+        name = re.sub(r"\s+", "_", name).strip(" ._")
+        return name or "project"
+
+    def _move_if_needed(
+        self,
+        project_directory: Path,
+        current_relative_path: str,
+        next_relative_path: str | None,
+    ) -> None:
+        if next_relative_path is None or current_relative_path == next_relative_path:
+            return
+        source = resolve_within(
+            project_directory,
+            Path(*PurePosixPath(current_relative_path).parts),
+        )
+        destination = resolve_within(
+            project_directory, Path(*PurePosixPath(next_relative_path).parts)
+        )
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if destination.exists():
+            return
+        if source.exists():
+            os.replace(source, destination)
 
     @staticmethod
     def _safe_file_path(directory: Path, filename: str) -> Path:
@@ -434,3 +563,8 @@ class AssetRepository:
         if not resolved.is_dir():
             raise CorruptMetadataError("asset directory is missing")
         return resolved
+
+    def _ensure_safe_directory(self, root: Path, relative: PurePosixPath) -> Path:
+        resolved = resolve_within(root, Path(*relative.parts))
+        resolved.mkdir(parents=True, exist_ok=True)
+        return self._safe_directory(root, relative)

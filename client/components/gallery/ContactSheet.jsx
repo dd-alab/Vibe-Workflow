@@ -6,8 +6,10 @@ import { useEffect, useState } from "react";
 
 import { assetThumbnailUrl } from "../../lib/api/assets";
 import { getGallery } from "../../lib/api/gallery";
+import { getProject } from "../../lib/api/projects";
 
 export default function ContactSheet({ projectId }) {
+  const [project, setProject] = useState(null);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -15,9 +17,10 @@ export default function ContactSheet({ projectId }) {
 
   useEffect(() => {
     let cancelled = false;
-    getGallery(projectId)
-      .then((loadedItems) => {
+    Promise.all([getProject(projectId), getGallery(projectId)])
+      .then(([loadedProject, loadedItems]) => {
         if (!cancelled) {
+          setProject(loadedProject);
           setItems(loadedItems);
           setError("");
         }
@@ -62,12 +65,17 @@ export default function ContactSheet({ projectId }) {
   return (
     <div className="space-y-5">
       <header>
-        <Link
-          href={`/projects/${projectId}`}
-          className="inline-flex min-h-11 items-center text-sm text-zinc-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
-        >
-          Retour au projet
-        </Link>
+        <div className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+          <span className="max-w-xl truncate font-medium text-zinc-200">
+            {project?.name}
+          </span>
+          <Link
+            href={`/projects/${projectId}`}
+            className="text-zinc-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
+          >
+            Retour au projet
+          </Link>
+        </div>
         <div className="mt-2">
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-accent-soft">
             Galerie
@@ -76,7 +84,7 @@ export default function ContactSheet({ projectId }) {
             Planche contact
           </h1>
           <p className="mt-2 text-sm text-zinc-500">
-            {items.length}/30 personnages. Les cartes utilisent uniquement les miniatures.
+            {items.length}/30 assets. Les cartes utilisent uniquement les miniatures.
           </p>
         </div>
       </header>
@@ -89,7 +97,7 @@ export default function ContactSheet({ projectId }) {
             <Link
               key={item.character_id}
               href={`/projects/${projectId}/characters/${item.character_id}`}
-              className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
+              className="group rounded-2xl border border-white/10 bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-focus"
             >
               <div className="relative aspect-[4/5] bg-black/30">
                 {asset && !missing ? (
@@ -100,7 +108,7 @@ export default function ContactSheet({ projectId }) {
                     alt={`Image selectionnee pour ${item.character_name}`}
                     sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                     onError={() => markThumbnailMissing(asset.id)}
-                    className="object-cover transition duration-300 group-hover:scale-[1.02]"
+                    className="rounded-none object-cover transition duration-300 group-hover:scale-[1.02]"
                   />
                 ) : (
                   <div className="grid h-full place-items-center p-4 text-center text-sm text-zinc-600">

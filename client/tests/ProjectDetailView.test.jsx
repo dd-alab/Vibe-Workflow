@@ -6,7 +6,7 @@ import {
   createCharacter,
   listCharacters,
 } from "../lib/api/characters";
-import { getProject } from "../lib/api/projects";
+import { deleteProject, getProject, updateProject } from "../lib/api/projects";
 
 const push = vi.fn();
 
@@ -15,6 +15,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("../lib/api/projects", () => ({
+  deleteProject: vi.fn(),
   getProject: vi.fn(),
   updateProject: vi.fn(),
 }));
@@ -28,6 +29,7 @@ vi.mock("../lib/api/characters", () => ({
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.useRealTimers();
 });
 
 describe("ProjectDetailView", () => {
@@ -68,9 +70,9 @@ describe("ProjectDetailView", () => {
     listCharacters.mockResolvedValue([]);
     createCharacter.mockResolvedValue({ id: "new-character-uuid" });
     render(<ProjectDetailView projectId="project-uuid" />);
-    await screen.findByText("Aucun personnage dans ce projet");
+    await screen.findByText("Aucun asset dans ce projet");
 
-    fireEvent.change(screen.getByLabelText("Nom du personnage"), {
+    fireEvent.change(screen.getByLabelText("Nom de l'asset"), {
       target: { value: "  Ecuyere fantome  " },
     });
     fireEvent.click(screen.getByRole("button", { name: "Creer et ouvrir" }));
@@ -109,5 +111,76 @@ describe("ProjectDetailView", () => {
     expect(
       screen.getByRole("textbox", { name: "Renommer Auguste melancolique" }),
     ).toHaveFocus();
+  });
+
+  it("autosaves free project texts", async () => {
+    getProject.mockResolvedValue({
+      id: "project-uuid",
+      name: "Portraits du cirque",
+      revision: 1,
+      notes_1: "Note initiale",
+      notes_2: "",
+    });
+    listCharacters.mockResolvedValue([]);
+    updateProject.mockResolvedValue({
+      id: "project-uuid",
+      name: "Portraits du cirque",
+      revision: 2,
+      notes_1: "Nouvelle note",
+      notes_2: "Deuxieme texte",
+    });
+
+    render(<ProjectDetailView projectId="project-uuid" />);
+    const firstText = await screen.findByRole("textbox", { name: "Texte libre 1" });
+    const secondText = screen.getByRole("textbox", { name: "Texte libre 2" });
+
+    vi.useFakeTimers();
+    fireEvent.change(firstText, { target: { value: "Nouvelle note" } });
+    fireEvent.change(secondText, { target: { value: "Deuxieme texte" } });
+    await vi.advanceTimersByTimeAsync(700);
+    vi.useRealTimers();
+
+    await waitFor(() => {
+      expect(updateProject).toHaveBeenCalledWith("project-uuid", {
+        expected_revision: 1,
+        notes_1: "Nouvelle note",
+        notes_2: "Deuxieme texte",
+      });
+    });
+  });
+
+  it("deletes the project only after double confirmation", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    getProject.mockResolvedValue({
+      id: "project-uuid",
+      name: "Portraits du cirque",
+      revision: 1,
+    });
+    listCharacters.mockResolvedValue([]);
+    deleteProject.mockResolvedValue(null);
+
+    render(<ProjectDetailView projectId="project-uuid" />);
+    await screen.findByText("Portraits du cirque");
+
+    fireEvent.click(screen.getByRole("button", { name: "Supprimer le projet" }));
+
+    expect(confirm).toHaveBeenCalledWith(
+      "Etes-vous certain de vouloir supprimer ce projet ?",
+    );
+    const finalDelete = screen.getByRole("button", {
+      name: "Supprimer definitivement",
+    });
+    expect(finalDelete).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("Confirmation"), {
+      target: { value: "efface ce projet" },
+    });
+    fireEvent.click(finalDelete);
+
+    await waitFor(() => {
+      expect(deleteProject).toHaveBeenCalledWith("project-uuid");
+      expect(push).toHaveBeenCalledWith("/projects");
+    });
+    confirm.mockRestore();
   });
 });
