@@ -128,8 +128,9 @@ export async function request(path, options = {}) {
   }
 
   const contentType = response.headers.get("content-type") ?? "";
-  const payload = contentType.includes("application/json")
-    ? await response.json()
+  const text = await response.text();
+  const payload = contentType.includes("application/json") && text
+    ? parseJson(text)
     : null;
 
   if (!response.ok) {

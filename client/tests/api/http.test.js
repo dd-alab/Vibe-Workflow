@@ -14,7 +14,7 @@ describe("request", () => {
         ok: false,
         status: 422,
         headers: { get: () => "application/json" },
-        json: () => Promise.resolve({ detail: [{ msg: "Champ invalide" }] }),
+        text: () => Promise.resolve('{"detail":[{"msg":"Champ invalide"}]}'),
       }),
     );
 
@@ -23,6 +23,21 @@ describe("request", () => {
       status: 422,
       message: "Champ invalide",
     });
+  });
+
+  it("accepts empty success responses", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 204,
+        headers: { get: () => "application/json" },
+        text: () => Promise.resolve(""),
+      }),
+    );
+
+    await expect(request("/api/projects/project-uuid", { method: "DELETE" }))
+      .resolves.toBeNull();
   });
 
   it("normalizes local network failures", async () => {
